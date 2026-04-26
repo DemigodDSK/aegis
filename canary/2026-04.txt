@@ -1,0 +1,32 @@
+AEGIS WARRANT CANARY
+Reporting period: April 2026
+
+As of the publication date below:
+
+1. Aegis has not received any requests from any government,
+   law-enforcement agency, or other party to weaken its
+   cryptographic guarantees, insert a backdoor, or hand over
+   user data beyond the minimum legally required.
+
+2. Aegis has not been compelled to make any change to its
+   cryptographic core or threat model that it would not have
+   made for technical or community reasons alone.
+
+3. The Maintainer has not been gagged from disclosing such a
+   request via any legal mechanism known to them at this time.
+
+4. The project's mission, governance, license, and threat model
+   are unchanged since the prior canary publication (this is
+   the inaugural canary, so no prior to compare).
+
+If this canary is not updated for two consecutive months, OR if
+the language above is materially altered, treat the canary as
+triggered and review the project's repository, public statements,
+and recent commits with appropriate scepticism.
+
+Maintainer: Datta Sai Krishna N
+GitHub: @DemigodDSK
+Date of publication: 2026-04-26
+
+This file should be PGP-signed once the maintainer's PGP key is
+generated; the signature is in the .asc file alongside this one.

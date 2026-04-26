@@ -1,0 +1,71 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Xcode
+build/
+DerivedData/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata/
+*.xccheckout
+*.moved-aside
+*.xcuserstate
+*.xcscmblueprint
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Packages/
+Package.pins
+Package.resolved
+*.xcworkspace
+!default.xcworkspace
+.netrc
+
+# Swift / iOS build artifacts
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# CocoaPods (if ever used)
+Pods/
+*.podfile.lock
+
+# Carthage (if ever used)
+Carthage/Build/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# Keys, certs, secrets — NEVER commit
+*.p8
+*.p12
+*.pem
+*.cer
+*.mobileprovision
+*.crt
+secrets/
+.env
+.env.*
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Aegis-specific
+Resources/GoogleService-Info.plist
