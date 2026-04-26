@@ -1,0 +1,55 @@
+Issue 1
+Title: macOS 26.x / Swift 6.3.x: AES.GCM.open SIGTRAP on auth failure
+Labels: bug, upstream, tier-1, crypto-core
+Body:
+AESGCMTests skips three tampering tests because CryptoKit's AES.GCM.open traps (signal 5) inside the framework on authentication failure for ciphertext-tampering and tag-tampering paths, before the throw can be caught. Reproduces standalone (no Aegis code involved). Affected: macOS 26.x with Swift 6.3.x toolchain.
+
+Aegis behaviour is unaffected — same auth-failure path is verified by testDecrypt_tamperedAAD_throwsAuthenticationFailed which throws cleanly. Re-enable the three skips once Apple ships a fix or once we gain access to a workaround.
+
+Action items:
+
+not done
+File rdar:// against CryptoKit team
+not done
+Track release notes for any CryptoKit fix
+not done
+Investigate falling back to a pure-Swift AES-GCM implementation if Apple's fix takes too long
+
+Issue 2
+Title: Expand AES-GCM KAT coverage from BoringSSL test data
+Labels: enhancement, tests, tier-1
+Body:
+v0.0.2 ships 5 NIST CAVP test vectors verified against AESGCMKATTests. Hand-transcribing more risks the typo class of bug we already hit during sprint 1.
+
+Add ~20 additional vectors fetched programmatically from BoringSSL's crypto/cipher_extra/test/cipher_tests.txt (or equivalent vetted source). Goal: cover plaintext lengths 0/16/128/256/1024 bytes × AAD lengths 0/16/128 bytes × at least 3 random keys per combination.
+
+Action items:
+
+not done
+Write a build-time fetcher script that downloads, parses, and emits a Swift test-vector array
+not done
+Verify checksum of fetched data matches a pinned hash in the repo
+not done
+Add CI step to refuse build if KATs reduced below a baseline count
+
+Issue 3
+Title: Sprint 2 plan: ML-KEM-768 + X25519 hybrid key encapsulation
+Labels: epic, tier-1, crypto-core, sprint-2
+Body:
+v0.0.3 target: post-quantum key exchange via NIST ML-KEM-768 hybridised with X25519 (the safer option until ML-KEM has another decade of cryptanalytic review).
+
+Investigation needed:
+
+Apple CryptoKit ML-KEM availability on iOS 18+/macOS 15+ (uncertain)
+Fall-back: liboqs Swift bindings via system module
+Last resort: pure-Swift port of the NIST reference implementation (not recommended; auditable but slow)
+Definition of done:
+
+not done
+Tier1/MLKEM768.swift + Tier1/HybridKEM.swift
+not done
+NIST ML-KEM-768 KAT vectors passing
+not done
+HKDF combiner producing the final 256-bit AES-GCM key
+not done
+tag v0.0.3-sprint-2
