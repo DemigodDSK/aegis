@@ -1,0 +1,126 @@
+name: New algorithm proposal (Aegis Lab — Tier 2 sandbox)
+description: Propose a new community-contributed cryptographic algorithm for the sandbox tier.
+title: "[Tier 2] <algorithm name>: <one-line description>"
+labels: ["algorithm-submission", "tier-2"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for proposing an algorithm.
+
+        **Read this first:** this template is for **Tier 2 (sandbox / experimental)** algorithms only.
+        Tier 1 (default-safe, NIST-standardised) algorithms are not added by submission — see
+        [ALGORITHM-SUBMISSION.md](../ALGORITHM-SUBMISSION.md) "Tier 1 promotion (Council process only)".
+
+        This is also not the place to propose changes to AES-256-GCM, ML-KEM, ML-DSA, or other
+        Tier 1 primitives we already ship.
+
+  - type: input
+    id: name
+    attributes:
+      label: Algorithm name
+      description: Short and unique. Examples — "ChaCha20-Salsa-Hybrid", "ToyBlockCipher", "QuantumPad-v2".
+      placeholder: My-Algorithm-Name
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: One-paragraph description
+      description: What does it do? What problem does it (claim to) solve? Plain English, no marketing.
+      placeholder: "A symmetric encryption scheme that ..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: provenance
+    attributes:
+      label: Provenance
+      options:
+        - "Implementation of an existing standard / published algorithm"
+        - "Novel design by the author"
+        - "Variant or modification of an existing published algorithm"
+    validations:
+      required: true
+
+  - type: textarea
+    id: citation
+    attributes:
+      label: Citation or reference
+      description: |
+        If implementing an existing standard, cite the paper / RFC / spec.
+        If novel, link to a writeup, blog post, or describe the design here.
+      placeholder: "Smith & Jones (2024). 'Hybrid Symmetric Encryption with ...'. IACR ePrint 2024/1234."
+
+  - type: checkboxes
+    id: claimed-properties
+    attributes:
+      label: Claimed security properties
+      description: Be honest. Do not claim properties you cannot defend.
+      options:
+        - label: "Confidentiality (against a passive adversary)"
+        - label: "Confidentiality (against an active adversary)"
+        - label: "Integrity"
+        - label: "Authenticity"
+        - label: "Forward secrecy"
+        - label: "Post-compromise security"
+        - label: "Post-quantum resistance"
+
+  - type: textarea
+    id: known-limitations
+    attributes:
+      label: Known limitations
+      description: |
+        What do you know is wrong, suspect is wrong, or have not analysed?
+        "I have not analysed the timing-side-channel resistance" is a fine answer.
+        Saying "no known limitations" is almost always wrong.
+      placeholder: "I have not done formal cryptanalysis. Side-channel resistance unknown. Tested only on macOS arm64."
+    validations:
+      required: true
+
+  - type: textarea
+    id: test-vectors
+    attributes:
+      label: Test vectors
+      description: |
+        Provide at least 5 round-trip test cases (input → encrypted → decrypted matches input).
+        For implementations of existing standards, prefer the standard's official test vectors.
+      placeholder: "See TestVectors.swift in the PR."
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: licensing
+    attributes:
+      label: Licensing & CLA
+      options:
+        - label: "I will license my code under Apache 2.0 (required for Tier 2 inclusion)"
+          required: true
+        - label: "I have read and will sign the Contributor License Agreement ([CLA.md](../CLA.md))"
+          required: true
+        - label: "I understand my algorithm will appear in the in-app sandbox marked as 'Experimental — not audited'"
+          required: true
+
+  - type: checkboxes
+    id: refusal-acks
+    attributes:
+      label: Acknowledgements (please confirm)
+      options:
+        - label: "I am NOT claiming this algorithm is 'unbreakable' or 'absolutely secure'"
+          required: true
+        - label: "This algorithm's security does NOT depend on the algorithm itself being secret"
+          required: true
+        - label: "This is NOT a modification of an existing Tier 1 algorithm being branded as new"
+          required: true
+        - label: "This is NOT a cryptocurrency or token primitive"
+          required: true
+
+  - type: textarea
+    id: author
+    attributes:
+      label: About you
+      description: Name, GitHub handle, optional contact, and a sentence about your background. Recognition only — does not gate approval.
+      placeholder: "Jane Researcher (@janeresearcher), grad student at ... working on ..."
+    validations:
+      required: true

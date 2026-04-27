@@ -1,0 +1,28 @@
+# GitHub will pick up this file automatically and surface these
+# entries on the "New issue" chooser screen, alongside the YAML
+# templates in this directory.
+
+blank_issues_enabled: false
+
+contact_links:
+  - name: 🔒 Security vulnerability — DO NOT file publicly
+    url: https://github.com/DemigodDSK/aegis/security/advisories/new
+    about: |
+      Please report security issues privately via GitHub Security
+      Advisories or email per SECURITY.md. Filing security reports
+      publicly puts users at risk before a fix is available.
+
+  - name: 💬 Question or general discussion
+    url: https://github.com/DemigodDSK/aegis/discussions
+    about: |
+      For questions, design discussions, "is this a bug?" checks,
+      and general chat, please use Discussions. Issues are reserved
+      for actionable bugs, feature requests, and algorithm proposals.
+
+  - name: 🛡️ Volunteer for the Security Council
+    url: https://github.com/DemigodDSK/aegis/issues/new?labels=council-interest&title=Security+Council+interest+from+%5Byour+name%5D
+    about: |
+      If you have applied-cryptography, secure-systems-engineering,
+      or formal-verification experience and would consider serving
+      on the Aegis Security Council (see GOVERNANCE.md), open an
+      issue with this template.
