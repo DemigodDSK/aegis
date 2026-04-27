@@ -1,0 +1,46 @@
+# EditorConfig — keep formatting consistent across editors and OSes.
+# https://editorconfig.org
+
+root = true
+
+[*]
+charset                  = utf-8
+end_of_line              = lf
+indent_style             = space
+indent_size              = 4
+trim_trailing_whitespace = true
+insert_final_newline     = true
+max_line_length          = 100
+
+# Markdown — tighter indent, do not strip trailing whitespace
+# (two trailing spaces in MD = hard line break).
+[*.md]
+indent_size              = 2
+trim_trailing_whitespace = false
+
+# YAML, JSON: 2-space convention.
+[*.{yml,yaml,json}]
+indent_size = 2
+
+# Shell scripts: 4-space (matches the rest of the repo).
+[*.sh]
+indent_size = 4
+
+# Makefiles must use tabs.
+[Makefile]
+indent_style = tab
+
+# License files: leave them exactly as upstream sends them.
+[LICENSE]
+indent_style             = unset
+indent_size              = unset
+trim_trailing_whitespace = false
+insert_final_newline     = unset
+
+# Warrant canary files: never reformat. Future signature
+# verification depends on byte-exact contents.
+[canary/*]
+indent_style             = unset
+indent_size              = unset
+trim_trailing_whitespace = false
+insert_final_newline     = unset

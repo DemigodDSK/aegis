@@ -1,0 +1,77 @@
+name: Bug report
+description: Report a bug in Aegis. For SECURITY vulnerabilities, do NOT use this — see SECURITY.md.
+title: "[bug] <one-line summary>"
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ⚠️ **If you have found a security vulnerability — do not file it here.**
+        Please follow the disclosure process in [SECURITY.md](../SECURITY.md).
+        Filing security issues publicly puts users at risk before a fix is available.
+
+  - type: checkboxes
+    id: not-security
+    attributes:
+      label: Confirmation
+      options:
+        - label: "This is NOT a security vulnerability. (If it might be, I have read SECURITY.md and will report privately instead.)"
+          required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Aegis version
+      description: Which version or commit SHA?
+      placeholder: "v0.0.2-sprint-1, or commit SHA"
+    validations:
+      required: true
+
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      description: macOS / iOS version, device, Xcode version
+      placeholder: "macOS 26.2 / Xcode 26.0 / Swift 6.3.1 / arm64 (Apple silicon)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      placeholder: "When I ran X, I expected Y but got Z."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How do I reproduce it?
+      description: Minimal steps. Code snippets and `swift test` invocations welcome.
+      placeholder: |
+        1. Clone the repo at commit ...
+        2. Run `swift test`
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output / stack trace
+      description: Paste any error messages, test output, or stack traces. Will be rendered in a code block.
+      render: text
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Anything else? Screenshots, related issues, hypotheses.
