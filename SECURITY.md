@@ -10,11 +10,52 @@ Please report vulnerabilities by email.
 **Interim address (until domain registration completes):**
 Open a private GitHub Security Advisory at
 https://github.com/DemigodDSK/aegis/security/advisories/new
-or email the maintainer via their GitHub-noreply address.
+or email the maintainer (Datta Sai Krishna N) at
+**dsk7699@gmail.com**.
 
-**PGP key fingerprint:** `TO BE GENERATED — published to
-https://aegisproject.org/security.asc and to keys.openpgp.org
-once available.`
+## Maintainer PGP key
+
+All maintainer signatures (warrant canaries, security advisories,
+release tags) are signed with this key. Verify using the
+fingerprint and the public key bundled in this repository at
+[`.well-known/security.asc`](.well-known/security.asc).
+
+| | |
+|---|---|
+| **Fingerprint** | `E7B6 56B4 D0DD BB07 29ED  462F FF11 64C0 B4D2 8DE4` |
+| **Algorithm**   | ed25519 (signing) + cv25519 (encryption subkey) |
+| **Created**     | 2026-04-27 |
+| **Expires**     | 2028-04-26 |
+| **User ID**     | Datta sai krishna N (Aegis project maintainer) <dsk7699@gmail.com> |
+
+### Verify the public key in this repo matches the published one
+
+```bash
+# Import the public key from the repo
+gpg --import .well-known/security.asc
+
+# OR import from keys.openpgp.org
+gpg --keyserver keys.openpgp.org --recv-keys E7B656B4D0DDBB0729ED462FFF1164C0B4D28DE4
+
+# Confirm the fingerprint matches:
+gpg --fingerprint E7B656B4D0DDBB0729ED462FFF1164C0B4D28DE4
+```
+
+The fingerprint shown should be exactly:
+`E7B6 56B4 D0DD BB07 29ED  462F FF11 64C0 B4D2 8DE4`
+
+If it does not match, do not trust any signature claiming to be
+from this maintainer. Open a public GitHub issue immediately —
+this is exactly the kind of attack the warrant canary protocol
+is designed to surface.
+
+### Verify the warrant canary
+
+```bash
+gpg --verify canary/2026-04.txt.asc canary/2026-04.txt
+```
+
+Expected output: `Good signature from "Datta sai krishna N..."`.
 
 ### What to include in your report
 
