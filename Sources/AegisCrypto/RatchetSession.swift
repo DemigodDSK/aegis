@@ -79,7 +79,14 @@ public struct RatchetMessageHeader: Sendable, Codable, Equatable {
 
 /// Bidirectional Double Ratchet state. Mutating struct — both
 /// `encrypt` and `decrypt` advance state. Hold one per peer.
-public struct RatchetSession: Sendable {
+///
+/// Codable: the entire session state — root key, both chain
+/// keys, both DH keys, counters, and the skipped-keys cache —
+/// is encoded as a single JSON object. Persistence consumers
+/// (Sprint 8 onwards) treat the encoded blob as opaque
+/// AEAD-protected ciphertext at the storage layer; the only
+/// thing the storage layer needs to know is "Codable".
+public struct RatchetSession: Sendable, Codable {
 
     /// Maximum number of skipped message keys we cache. Once
     /// reached, the oldest keys are evicted (LRU). Bounds
@@ -162,7 +169,7 @@ public struct RatchetSession: Sendable {
 /// `(dhPublicKey, messageNumber)` is unique per chain because
 /// `dhPublicKey` is the peer's DH key that was active when the
 /// chain produced the message.
-struct SkippedKeyIdentity: Hashable, Sendable {
+struct SkippedKeyIdentity: Hashable, Sendable, Codable {
     let dhPublicKey: Data
     let messageNumber: UInt32
 }

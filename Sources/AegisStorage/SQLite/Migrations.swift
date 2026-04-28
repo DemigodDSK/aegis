@@ -66,6 +66,19 @@ public enum Migrations {
             CREATE INDEX idx_messages_conv_sent
                 ON messages(conversation_id, sent_at);
             """
+        ),
+        Migration(
+            version: 2,
+            description: "Sprint 8 schema v2: ratchet_sessions table",
+            sql: """
+            CREATE TABLE ratchet_sessions (
+                conversation_id     BLOB    PRIMARY KEY NOT NULL
+                                    REFERENCES conversations(id)
+                                    ON DELETE CASCADE,
+                state               BLOB    NOT NULL,
+                updated_at          INTEGER NOT NULL
+            );
+            """
         )
     ]
 

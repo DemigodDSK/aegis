@@ -30,7 +30,7 @@ import Foundation
 
 /// A 32-byte symmetric-ratchet chain key. Advances on every
 /// message and is rotated on every DH ratchet step.
-public struct ChainKey: Sendable, Equatable {
+public struct ChainKey: Sendable, Equatable, Codable {
     public static let byteCount = 32
     public let bytes: Data
 
@@ -40,6 +40,23 @@ public struct ChainKey: Sendable, Equatable {
             "ChainKey must be exactly \(ChainKey.byteCount) bytes; got \(bytes.count)"
         )
         self.bytes = bytes
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let data = try container.decode(Data.self)
+        guard data.count == Self.byteCount else {
+            throw DecodingError.dataCorrupted(.init(
+                codingPath: container.codingPath,
+                debugDescription: "ChainKey expects \(Self.byteCount) bytes; got \(data.count)"
+            ))
+        }
+        self.init(bytes: data)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(bytes)
     }
 
     /// Advance this chain key by one step. Returns the
@@ -81,7 +98,7 @@ public struct ChainKey: Sendable, Equatable {
 /// at most once — either immediately (in-order delivery) or
 /// after being cached in the skipped-message-keys store
 /// (out-of-order delivery, commit 4 of this sprint).
-public struct MessageKey: Sendable, Equatable {
+public struct MessageKey: Sendable, Equatable, Codable {
     public static let byteCount = 32
     public let bytes: Data
 
@@ -91,6 +108,23 @@ public struct MessageKey: Sendable, Equatable {
             "MessageKey must be exactly \(MessageKey.byteCount) bytes; got \(bytes.count)"
         )
         self.bytes = bytes
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let data = try container.decode(Data.self)
+        guard data.count == Self.byteCount else {
+            throw DecodingError.dataCorrupted(.init(
+                codingPath: container.codingPath,
+                debugDescription: "MessageKey expects \(Self.byteCount) bytes; got \(data.count)"
+            ))
+        }
+        self.init(bytes: data)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(bytes)
     }
 
     /// Expand this message key into the AES-256-GCM material
@@ -165,7 +199,7 @@ public struct DerivedMessageKeys: Sendable {
 /// A 32-byte Double-Ratchet root key. Advances on every DH
 /// step; each advance also produces the chain key for the new
 /// half of the bidirectional session.
-public struct RootKey: Sendable, Equatable {
+public struct RootKey: Sendable, Equatable, Codable {
     public static let byteCount = 32
     public let bytes: Data
 
@@ -175,6 +209,23 @@ public struct RootKey: Sendable, Equatable {
             "RootKey must be exactly \(RootKey.byteCount) bytes; got \(bytes.count)"
         )
         self.bytes = bytes
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let data = try container.decode(Data.self)
+        guard data.count == Self.byteCount else {
+            throw DecodingError.dataCorrupted(.init(
+                codingPath: container.codingPath,
+                debugDescription: "RootKey expects \(Self.byteCount) bytes; got \(data.count)"
+            ))
+        }
+        self.init(bytes: data)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(bytes)
     }
 
     /// Perform one DH-ratchet step. Mixes the current root key
