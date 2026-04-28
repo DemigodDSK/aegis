@@ -97,6 +97,24 @@ post-quantum CryptoKit primitives (`MLKEM768`, `MLKEM1024`,
 `MLDSA65`, `XWingMLKEM768X25519`) are gated `@available(iOS 26.0,
 macOS 26.0, ...)`, so the SwiftPM platform floor follows them.
 
+### Run on iOS
+
+The iOS app target ships in this repo as `Aegis.xcodeproj`
+(generated from `project.yml` via [XcodeGen](https://github.com/yonaskolb/XcodeGen)).
+Run it on the iOS Simulator or a connected iPhone with a
+free Apple ID — full step-by-step in [docs/IOS-RUNBOOK.md](docs/IOS-RUNBOOK.md).
+
+```bash
+open Aegis.xcodeproj
+# In Xcode: pick the Aegis scheme → pick an iPhone simulator
+# or your physical iPhone → ⌘R
+```
+
+For the iOS distribution / TestFlight side
+(Apple Developer Program enrolment, App Store Connect record,
+signing certificates, archive + upload), see
+[docs/IOS-DISTRIBUTION-RUNBOOK.md](docs/IOS-DISTRIBUTION-RUNBOOK.md).
+
 ## License
 
 Aegis is licensed under [AGPL v3](LICENSE). The cryptographic core
