@@ -41,10 +41,7 @@ public struct RootView: View {
     @ViewBuilder
     private var content: some View {
         if !state.onboardingCompleted {
-            MilestoneView(
-                state: .onboarding,
-                action: state.markOnboardingComplete
-            )
+            OnboardingFlow(state: state)
         } else if state.identity == nil {
             MilestoneView(
                 state: .identity,
