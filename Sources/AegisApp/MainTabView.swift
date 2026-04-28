@@ -1,13 +1,12 @@
 // MainTabView.swift
-// The two-tab surface a user lands on after onboarding +
-// identity setup: Demo and Settings. Wrapped here so RootView
-// stays a thin router.
+// The three-tab surface a user lands on after onboarding +
+// identity setup: Demo, Conversations, Settings. Wrapped
+// here so RootView stays a thin router.
 //
-// We deliberately do NOT include placeholder Messages or
-// Contacts tabs at v0.0.7. There is no networking yet
-// (Sprint 8) — showing fake-functional tabs would violate
-// working principle 6 ("don't promise more than you ship").
-// Those tabs land when they actually do something.
+// The Conversations tab arrived in Sprint 8 (v0.0.9). It
+// reads from the SQLite-backed ConversationStore. With no
+// networking yet, the list is populated by the two-user
+// toggle (Sprint 8 commit 5).
 
 import SwiftUI
 
@@ -20,6 +19,11 @@ struct MainTabView: View {
             DemoScreen()
                 .tabItem {
                     Label("Demo", systemImage: "lock.shield")
+                }
+
+            ConversationsListView(state: state)
+                .tabItem {
+                    Label("Conversations", systemImage: "bubble.left.and.bubble.right")
                 }
 
             SettingsScreen(state: state)
