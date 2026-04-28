@@ -8,9 +8,23 @@ post-processing) and pinned to a specific upstream commit. The
 SHA-256 below was computed with macOS `shasum -a 256` on the
 file as it sits on disk.
 
-If you update a vector file, also update its row here. CI does
-not currently re-verify these checksums automatically — issue
-TBD will add a CI job that does.
+CI re-verifies these checksums on every push (see issue #7,
+resolved 2026-04-28): the macOS-26 build-and-test job fails
+before running tests if any file's SHA-256 does not match
+this README, or if any README entry has no matching file.
+
+## AES-256-GCM — BoringSSL aead test corpus
+
+| File | Source | Pinned commit | SHA-256 |
+|---|---|---|---|
+| `aes_256_gcm_tests.txt` | `google/boringssl @ crypto/cipher/test/aes_256_gcm_tests.txt` | [`a85ef9aa`](https://github.com/google/boringssl/blob/a85ef9aa6c6538e5ae014a408e9d69870bc4f404/crypto/cipher/test/aes_256_gcm_tests.txt) | `5f4c4fbbed80e021a9e5e3372284ff2779d2569c293c69fc86727f8c7ac0f087` |
+
+66 (KEY, NONCE, IN, AD, CT, TAG) tuples covering empty inputs,
+short and long plaintexts, empty and non-empty AAD, and the
+standard AES-GCM test cases that ship with BoringSSL's AEAD
+test corpus. Augments — does not replace — the 5 hand-
+transcribed NIST CAVP vectors that ship inline in
+`AESGCMKATTests.swift`.
 
 ## ML-KEM-768 — NIST FIPS 203
 
