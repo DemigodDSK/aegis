@@ -21,6 +21,14 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Run JavaScript-based actions (actions/checkout, actions/cache, ...)
+# on Node.js 24. Node.js 20 is being removed from GitHub-hosted
+# runners on 2026-09-16; opting in early avoids the deprecation
+# warning surfaced on every run and gives us advance notice if any
+# pinned action breaks under the new runtime. See issue #8.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 # Cancel any in-progress run when a new commit lands on the same ref.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -55,6 +63,47 @@ jobs:
           key: ${{ runner.os }}-spm-${{ hashFiles('Package.swift', 'Package.resolved') }}
           restore-keys: |
             ${{ runner.os }}-spm-
+
+      # Defence in depth for the KAT vectors: every file in
+      # Tests/AegisCryptoTests/Vectors/ must have its SHA-256
+      # documented in that directory's README.md, and every
+      # SHA-256 in the README.md must correspond to a real file.
+      # An unauthorised edit to a vector file (or a stale README
+      # entry) blocks merge before tests run. See issue #7.
+      - name: Verify Vectors/ SHA-256 checksums against README
+        run: |
+          set -e
+          cd Tests/AegisCryptoTests/Vectors
+
+          # Actual file checksums, sorted/uniqued.
+          actual=$(ls | grep -v '^README\.md$' \
+            | xargs -I{} shasum -a 256 {} \
+            | awk '{print $1}' \
+            | sort -u)
+
+          # README-documented checksums (backtick-wrapped 64 hex chars).
+          expected=$(grep -oE '`[0-9a-f]{64}`' README.md \
+            | tr -d '`' \
+            | sort -u)
+
+          missing_in_readme=$(comm -23 <(echo "$actual") <(echo "$expected"))
+          missing_files=$(comm -13 <(echo "$actual") <(echo "$expected"))
+
+          fail=0
+          if [ -n "$missing_in_readme" ]; then
+            echo "::error::these file checksums are not documented in README.md:"
+            echo "$missing_in_readme"
+            fail=1
+          fi
+          if [ -n "$missing_files" ]; then
+            echo "::error::these README.md checksums have no matching file:"
+            echo "$missing_files"
+            fail=1
+          fi
+          if [ "$fail" = "1" ]; then
+            exit 1
+          fi
+          echo "All Vectors/ files match README.md checksums."
 
       - name: Build
         run: swift build --verbose
