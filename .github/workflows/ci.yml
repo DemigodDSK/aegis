@@ -4,12 +4,14 @@ name: CI
 # Goal: zero-regression policy on the cryptographic core. If the build
 # breaks or any test fails, the PR is blocked.
 #
-# Note: macOS-26 runners (the host where we discovered the CryptoKit
-# AES.GCM.open SIGTRAP bug — see issue #1) are not yet available on
-# GitHub-hosted runners. CI runs on macOS-15 / macOS-14, where the
-# bug does not manifest. The three XCTSkip'd tests are therefore
-# *also* skipped in CI for consistency. When macOS-26 runners become
-# available we will pin to one and verify the skips were correct.
+# As of v0.0.3 (Sprint 2), Aegis depends on Apple's native post-quantum
+# CryptoKit primitives (MLKEM768, XWingMLKEM768X25519, MLDSA65,
+# SecureEnclave.MLKEM768), which are gated `@available(iOS 26.0,
+# macOS 26.0, ...)`. Package.swift therefore declares iOS 26 / macOS 26
+# minimums, and CI must run on macOS-26 runners to satisfy them.
+# This is also the host where the CryptoKit AES.GCM.open SIGTRAP
+# bug (issue #1) was first observed; the three XCTSkip'd tests
+# remain skipped on this runner until Apple ships a fix.
 
 on:
   push:
@@ -32,10 +34,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: '15'
-            runner: macos-15
-          - os: '14'
-            runner: macos-14
+          - os: '26'
+            runner: macos-26
     steps:
       - name: Checkout
         uses: actions/checkout@v4

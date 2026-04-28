@@ -61,9 +61,9 @@ macOS 26.x — see [issue #1](https://github.com/DemigodDSK/aegis/issues/1).
 
 ---
 
-## v0.0.2.1 — Polish 🚧
+## v0.0.2.1 — Polish ✅
 
-**Tagged:** `v0.0.2.1-polish` (planned)
+**Tagged:** `v0.0.2.1-polish`
 **Goal:** make the repo look professional to outside contributors.
 No new cryptography.
 
@@ -73,12 +73,32 @@ Deliverables:
 - [x] `docs/STAGES.md` (this file)
 - [x] `.github/ISSUE_TEMPLATE/` (algorithm submission + bug report)
 - [x] `.editorconfig`
-- [ ] Maintainer PGP key generated and published
-- [ ] First warrant canary signed (`canary/2026-04.txt.asc`)
+
+PGP-key / canary-signing work originally listed here shipped
+separately as v0.0.2.2-pgp; see below.
 
 ---
 
-## v0.0.3 — Sprint 2: ML-KEM-768 + X25519 hybrid 📋
+## v0.0.2.2 — Maintainer PGP identity ✅
+
+**Tagged:** `v0.0.2.2-pgp`
+**Goal:** establish the cryptographic identity used for signing
+warrant canaries, releases, and GOVERNANCE-required attestations.
+
+Deliverables:
+- [x] Maintainer ed25519 + cv25519 keypair generated
+      (fingerprint `E7B6 56B4 D0DD BB07 29ED 462F FF11 64C0 B4D2 8DE4`,
+      expires 2028-04-26)
+- [x] Public key committed to `.well-known/security.asc`
+- [x] Public key published on `keys.openpgp.org`
+- [x] Inaugural warrant canary signed (`canary/2026-04.txt.asc`,
+      verifies cleanly)
+- [x] Fingerprint embedded in `SECURITY.md` with verification steps
+- [x] Revocation certificate generated and backed up off-repo
+
+---
+
+## v0.0.3 — Sprint 2: ML-KEM-768 + X25519 hybrid 🚧
 
 **Goal:** post-quantum key encapsulation. This is the headline
 feature — what makes Aegis genuinely *post-quantum* rather than
@@ -87,17 +107,64 @@ just "AES-GCM in a wrapper".
 Tracking issue: [#3](https://github.com/DemigodDSK/aegis/issues/3)
 
 Deliverables:
-- [ ] Investigate Apple CryptoKit ML-KEM availability on iOS 18+ / macOS 15+
-- [ ] If absent: vendor `liboqs` (pinned commit + checksum) with Swift bindings
+- [x] Investigate Apple CryptoKit ML-KEM availability — see Conscious
+      Deviation below. Apple ships native PQC on macOS 26 / iOS 26.
+- [ ] Bump `Package.swift` platform minimums to iOS 26 / macOS 26
+      (and update CI runners to `macos-26` to match)
 - [ ] `KeyEncapsulation` protocol (parallel to `Encryption`)
-- [ ] `Sources/AegisCrypto/Tier1/MLKEM768.swift`
-- [ ] `Sources/AegisCrypto/Tier1/X25519KEM.swift`
-- [ ] `Sources/AegisCrypto/Tier1/HybridKEM.swift` (concat + HKDF combiner)
-- [ ] NIST ML-KEM-768 KAT vectors passing (fetched per [issue #2](https://github.com/DemigodDSK/aegis/issues/2))
+- [ ] `Sources/AegisCrypto/Tier1/HybridKEM.swift` — thin wrapper over
+      Apple's `XWingMLKEM768X25519`, conforming to `KeyEncapsulation`
+- [ ] X-Wing KAT vectors passing (per draft-connolly-cfrg-xwing-kem)
+- [ ] Standalone `MLKEM768` smoke test against NIST FIPS 203 KATs
+      (verifies the underlying KEM, complements the X-Wing tests)
 - [ ] Tag `v0.0.3-sprint-2`
 
 Out of scope: the actual key-exchange protocol (X3DH-equivalent)
 and identity signatures — those are Sprint 3.
+
+### Conscious deviation — X-Wing instead of concat+HKDF
+
+**Original plan (this document, pre-2026-04-27):** build a
+hand-rolled hybrid combining standalone `MLKEM768` and X25519 via
+the IETF concat+HKDF combiner.
+
+**Revised plan:** wrap Apple's `XWingMLKEM768X25519`, which is a
+different but equally IETF-track hybrid construction
+(draft-connolly-cfrg-xwing-kem; deployed in Apple's iMessage PQ3).
+
+**Why the change:**
+
+1. **Less crypto-core surface area.** A concat+HKDF combiner is
+   ~30 lines of Swift we would own and have to keep audited.
+   `XWingMLKEM768X25519` is zero lines we own.
+2. **Already deployed and reviewed.** iMessage PQ3 ships X-Wing in
+   production; the construction has both a peer-reviewed paper
+   (Bernstein, Connolly, Schwabe, Westerbaan, Wiggers, 2024) and an
+   active IETF draft.
+3. **Secure Enclave integration is free.** Apple exposes
+   SE-backed PQ private keys (`SecureEnclave.MLKEM768`); rolling our
+   own combiner forfeits that.
+4. **Aligns with working principle 4** (no creative cryptography in
+   Tier 1): X-Wing is a published primitive used by Apple, not
+   something we are inventing.
+
+**What we are giving up:**
+
+- Pinned to Apple's choice of combiner. If the IRTF process
+  eventually publishes a different combiner as "the" hybrid
+  standard, we will need to reconsider.
+- Cannot test this primitive against generic ML-KEM-768 KAT
+  vectors directly (those test the underlying KEM, not X-Wing).
+  We test via X-Wing's own KAT vectors and via CryptoKit's
+  standalone `MLKEM768` against NIST FIPS 203 KATs.
+
+**Where concat+HKDF goes instead:** it ships as the inaugural
+**Aegis Lab Tier 2** experiment (Year 2). That is exactly what
+Tier 2 is for — clearly-marked alternative constructions that
+users can opt into.
+
+**Approval:** `pre-council-approval`, Maintainer (@DemigodDSK),
+2026-04-27.
 
 ---
 
