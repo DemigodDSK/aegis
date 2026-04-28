@@ -272,30 +272,53 @@ the iOS app shell that actually exercises it:
 
 ---
 
-## v0.0.5 — Sprint 4: PQXDH key exchange + safety numbers 📋
+## v0.0.5 — Sprint 4: PQXDH key exchange + safety numbers ✅
 
+**Tagged:** `v0.0.5-sprint-4`
 **Goal:** Aegis can establish a secure session between two
 parties who have never communicated before. After this sprint,
 end-to-end E2EE bootstrap becomes genuinely real.
 
 Deliverables:
-- [ ] PQXDH-style key-exchange handshake. Reference: Signal's
-      "PQXDH: Post-Quantum Extended Diffie-Hellman" paper. Where
-      our primitive choices differ from Signal's (e.g. we may
-      use HybridKEM where they use bare ML-KEM-768), the
-      deviations are documented in THREAT-MODEL.md.
-- [ ] Identity, signed-prekey, one-time-prekey, and PQ-KEM
-      prekey types with explicit wire format and lifetimes.
-- [ ] Initial-message format with signature-chain verification.
-- [ ] Per-user identity keypair generation (in-memory only —
+- [x] PQXDH-style key-exchange handshake (`PQXDH.initiate` /
+      `PQXDH.respond`). PQ-KEM choice: bare ML-KEM-1024
+      (Cat-5), matching Signal's PQXDH spec exactly. The
+      X-Wing hybrid is reserved for end-to-end-message KEM
+      use; PQXDH already supplies the X25519 component via
+      its X3DH chain, so layering X-Wing inside would
+      double up.
+- [x] Identity, signed-prekey, one-time-prekey, and PQ-KEM
+      prekey types (`IdentityPublicKey`, `SignedPrekey`,
+      `SignedPQKEMPrekey`, `OneTimePrekey`, `PrekeyBundle`)
+      with explicit JSON wire format and per-role
+      domain-separated signatures, plus `signedPrekeyEpoch`
+      for rotation-aware replay defence.
+- [x] Initial-message format (`InitialMessage`) with full
+      signature-chain verification on the responder side.
+- [x] Per-user identity keypair generation
+      (`IdentityKeyPair.generate()`, in-memory only;
       Keychain persistence arrives in Sprint 6).
-- [ ] Safety-number derivation (Signal-compatible numeric
-      fingerprint over both parties' identity keys).
-- [ ] PQXDH KAT vectors passing — interop test against a
-      reference implementation if one is available
-      (e.g. libsignal). Otherwise deterministic round-trip
-      tests with documented inputs.
-- [ ] Tag `v0.0.5-sprint-4`
+- [x] Safety-number derivation (`SafetyNumber.compute(local:
+      remote:)`) — 12 groups × 5 digits, Signal format
+      compatible, order-independent, 5200-iteration SHA-512.
+- [x] PQXDH self-consistency tests: 20+ PQXDH cases plus the
+      surrounding identity / prekey-bundle / safety-number
+      suites covering round-trip with/without OPK, freshness
+      across sessions, epoch / keyId / signature-chain
+      rejection, JSON round-trip of InitialMessage.
+      Optional libsignal interop deferred to
+      [#10](https://github.com/DemigodDSK/aegis/issues/10).
+- [x] Tag `v0.0.5-sprint-4`
+
+New Tier 1 surface added in this sprint:
+- `MLKEM1024KEM` — bare ML-KEM-1024 (FIPS 203 Cat-5),
+  intended for protocol-internal use alongside ECDH (vs
+  HybridKEM, which is for AEAD-bootstrap end-to-end use).
+- `X25519` namespace + `DHKeyPair` envelope.
+
+Test status at tag: 148 tests, 3 skipped (pre-existing
+AES-GCM CryptoKit-trap cases — see [issue #1](https://github.com/DemigodDSK/aegis/issues/1)),
+0 failures.
 
 Out of scope:
 - Forward secrecy ratcheting — Sprint 5.
