@@ -66,6 +66,11 @@ public final class AppState {
     /// directly. Nil before `setupDatabase()` succeeds.
     public var conversationStore: ConversationStore? { conversationStoreImpl }
 
+    /// The two-user demo (Sprint 8 commit 5). Created lazily
+    /// after `setupDatabase()` succeeds; stays nil if the DB
+    /// failed to open.
+    public private(set) var twoUserDemo: TwoUserDemo?
+
     private static let onboardingKey =
         "io.github.demigoddsk.aegis.onboardingCompleted"
     private static let displayNameKey =
@@ -159,8 +164,45 @@ public final class AppState {
             self.database = db
             self.sessionStore = sessions
             self.conversationStoreImpl = conversations
+            self.twoUserDemo = TwoUserDemo(store: conversations)
             self.databaseError = nil
             try refreshConversations()
+        } catch {
+            databaseError = "\(error)"
+        }
+    }
+
+    /// Bootstrap the two-user demo (Sprint 8 commit 5). Idempotent —
+    /// safe to call from a button tap, no-op once already
+    /// bootstrapped. Errors are surfaced via `databaseError`
+    /// so the calling view can render a banner.
+    public func bootstrapTwoUserDemo() {
+        guard let demo = twoUserDemo else {
+            databaseError = "Database not ready"
+            return
+        }
+        do {
+            try demo.bootstrap()
+            try refreshConversations()
+            databaseError = nil
+        } catch {
+            databaseError = "\(error)"
+        }
+    }
+
+    /// Send `plaintext` from the currently-active persona of
+    /// the two-user demo. Refreshes the conversation list
+    /// (updated_at timestamps may have moved). Errors flow
+    /// through `databaseError`.
+    public func sendFromActivePersona(_ plaintext: Data) {
+        guard let demo = twoUserDemo, demo.isBootstrapped else {
+            databaseError = "Two-user demo not bootstrapped"
+            return
+        }
+        do {
+            _ = try demo.send(plaintext: plaintext)
+            try refreshConversations()
+            databaseError = nil
         } catch {
             databaseError = "\(error)"
         }

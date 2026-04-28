@@ -1,13 +1,10 @@
 // ConversationsListView.swift
-// The Conversations tab — a list of every locally-defined
-// conversation, with a row per conversation showing the peer's
-// display name and the time of its most recent activity.
-//
-// Empty state: a clear "No conversations yet" card. Sprint 8
-// commit 5 wires the two-user toggle that actually creates
-// conversations; until then this list is empty by design (we
-// don't render fake-functional conversations — working
-// principle 6, "don't promise more than you ship").
+// The Conversations tab. With Sprint 8 commit 5 wired in,
+// this is the entry point to the two-user demo: a persona
+// segmented control ("I am Alice / I am Bob") at the top, a
+// single conversation row showing the active persona's view,
+// and a "start the demo" button when nothing has been
+// bootstrapped yet.
 
 import AegisStorage
 import SwiftUI
@@ -15,11 +12,6 @@ import SwiftUI
 struct ConversationsListView: View {
 
     @Bindable var state: AppState
-
-    /// External hook so the parent (RootView /
-    /// MainTabView) can present a "create conversation"
-    /// affordance — wired in Sprint 8 commit 5.
-    var onCreateConversation: (() -> Void)?
 
     var body: some View {
         NavigationStack {
@@ -29,22 +21,22 @@ struct ConversationsListView: View {
                 Group {
                     if let error = state.databaseError {
                         errorCard(error)
-                    } else if state.conversations.isEmpty {
-                        emptyState
+                    } else if let demo = state.twoUserDemo, demo.isBootstrapped {
+                        bootstrappedList(demo)
                     } else {
-                        conversationList
+                        bootstrapPrompt
                     }
                 }
                 .padding(AegisTheme.spacing)
             }
             .navigationTitle("Conversations")
             .toolbar {
-                if let onCreate = onCreateConversation {
+                if let demo = state.twoUserDemo, !demo.isBootstrapped {
                     ToolbarItem(placement: .primaryAction) {
-                        Button(action: onCreate) {
+                        Button(action: { state.bootstrapTwoUserDemo() }) {
                             Image(systemName: "plus.circle.fill")
                                 .foregroundStyle(AegisTheme.accent)
-                                .accessibilityLabel("New conversation")
+                                .accessibilityLabel("Start two-user demo")
                         }
                     }
                 }
@@ -56,10 +48,10 @@ struct ConversationsListView: View {
         }
     }
 
-    // MARK: - Empty state
+    // MARK: - Pre-bootstrap
 
     @ViewBuilder
-    private var emptyState: some View {
+    private var bootstrapPrompt: some View {
         VStack(spacing: 12) {
             Image(systemName: "bubble.left.and.bubble.right")
                 .font(.system(size: 40))
@@ -67,7 +59,7 @@ struct ConversationsListView: View {
             Text("No conversations yet")
                 .font(AegisTheme.heading)
                 .foregroundStyle(AegisTheme.textPrimary)
-            Text("Aegis has no networking in v0.0.9 — this list will populate once you create a local two-user conversation.")
+            Text("Aegis has no networking in v0.0.9. Tap + to start the local two-user demo — Alice and Bob will be generated, run a full PQXDH handshake, and exchange messages on this device.")
                 .font(AegisTheme.caption)
                 .foregroundStyle(AegisTheme.textSecondary)
                 .multilineTextAlignment(.center)
@@ -76,25 +68,54 @@ struct ConversationsListView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // MARK: - List
+    // MARK: - Bootstrapped list
 
     @ViewBuilder
-    private var conversationList: some View {
-        ScrollView {
-            VStack(spacing: 8) {
-                ForEach(state.conversations, id: \.id) { conversation in
-                    NavigationLink {
-                        ConversationThreadView(state: state, conversation: conversation)
-                    } label: {
-                        row(for: conversation)
-                    }
-                    .buttonStyle(.plain)
+    private func bootstrappedList(_ demo: TwoUserDemo) -> some View {
+        VStack(spacing: AegisTheme.spacing) {
+            personaPicker(demo)
+
+            if let active = demo.activeConversation {
+                NavigationLink {
+                    ConversationThreadView(
+                        state: state,
+                        conversation: active,
+                        onSend: { plaintext in
+                            state.sendFromActivePersona(plaintext)
+                        }
+                    )
+                } label: {
+                    row(for: active, persona: demo.activePersona)
                 }
+                .buttonStyle(.plain)
+
+                Spacer()
             }
         }
     }
 
-    private func row(for conversation: Conversation) -> some View {
+    @ViewBuilder
+    private func personaPicker(_ demo: TwoUserDemo) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Acting as")
+                .font(AegisTheme.caption.weight(.semibold))
+                .foregroundStyle(AegisTheme.textSecondary)
+
+            Picker(
+                "Active persona",
+                selection: Binding(
+                    get: { demo.activePersona },
+                    set: { demo.setActivePersona($0) }
+                )
+            ) {
+                Text(TwoUserPersona.alice.displayName).tag(TwoUserPersona.alice)
+                Text(TwoUserPersona.bob.displayName).tag(TwoUserPersona.bob)
+            }
+            .pickerStyle(.segmented)
+        }
+    }
+
+    private func row(for conversation: Conversation, persona: TwoUserPersona) -> some View {
         HStack(spacing: AegisTheme.spacing) {
             Image(systemName: "person.crop.circle")
                 .font(.system(size: 32))
@@ -104,7 +125,7 @@ struct ConversationsListView: View {
                 Text(conversation.displayName)
                     .font(AegisTheme.body.weight(.semibold))
                     .foregroundStyle(AegisTheme.textPrimary)
-                Text(formatted(unixTime: conversation.updatedAt))
+                Text("Chatting as \(persona.displayName)")
                     .font(AegisTheme.caption)
                     .foregroundStyle(AegisTheme.textSecondary)
             }
@@ -118,13 +139,6 @@ struct ConversationsListView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(AegisTheme.surface)
         .clipShape(RoundedRectangle(cornerRadius: AegisTheme.cornerRadius))
-    }
-
-    private func formatted(unixTime: Int64) -> String {
-        let date = Date(timeIntervalSince1970: TimeInterval(unixTime))
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .short
-        return formatter.localizedString(for: date, relativeTo: Date())
     }
 
     // MARK: - Error
