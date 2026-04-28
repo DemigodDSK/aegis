@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		25A20714AF04043015120222 /* AegisIOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0883CA17E829EE7DD44C0A3C /* AegisIOSApp.swift */; };
-		431A1C1D4A7FAEFF250DEDA5 /* Resources in Resources */ = {isa = PBXBuildFile; fileRef = 33C5CA1A11548C9A5D66980E /* Resources */; };
+		46E8A2286F6984D8E5F3F5B2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 32D5DBA4B482EAC6D695CDCD /* Assets.xcassets */; };
 		8FD2D054E50FB8A71B6DD664 /* AegisStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 5918BA3C657CC0DA2CB8A481 /* AegisStorage */; };
 		B476B93C48CADA7296ECFD2A /* AegisApp in Frameworks */ = {isa = PBXBuildFile; productRef = 7B4822D0DB73D58815ACEF75 /* AegisApp */; };
 		D1C2243D03BB921A6E2289B3 /* AegisCrypto in Frameworks */ = {isa = PBXBuildFile; productRef = 5D95E7E1364C7DAAA078520C /* AegisCrypto */; };
@@ -16,7 +16,7 @@
 
 /* Begin PBXFileReference section */
 		0883CA17E829EE7DD44C0A3C /* AegisIOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AegisIOSApp.swift; sourceTree = "<group>"; };
-		33C5CA1A11548C9A5D66980E /* Resources */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Resources; path = iOS/Resources; sourceTree = SOURCE_ROOT; };
+		32D5DBA4B482EAC6D695CDCD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		8062DAFB759A5F4F2DEA7F6B /* Aegis.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Aegis.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F90F100A39BA3A1A6D1EE571 /* aegis */ = {isa = PBXFileReference; lastKnownFileType = folder; name = aegis; path = .; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -47,8 +47,8 @@
 			isa = PBXGroup;
 			children = (
 				AC6E95E89D98DBFB98CC4564 /* Packages */,
+				B84205A90C91CC25E91746E9 /* Resources */,
 				8A1DA03995A94C208797DD31 /* Sources */,
-				33C5CA1A11548C9A5D66980E /* Resources */,
 				50D0A2A1E229FE1B56E19372 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -68,6 +68,15 @@
 				F90F100A39BA3A1A6D1EE571 /* aegis */,
 			);
 			name = Packages;
+			sourceTree = "<group>";
+		};
+		B84205A90C91CC25E91746E9 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				32D5DBA4B482EAC6D695CDCD /* Assets.xcassets */,
+			);
+			name = Resources;
+			path = iOS/Resources;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -137,7 +146,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				431A1C1D4A7FAEFF250DEDA5 /* Resources in Resources */,
+				46E8A2286F6984D8E5F3F5B2 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -163,6 +172,7 @@
 				CODE_SIGN_ENTITLEMENTS = iOS/Aegis.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
+				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				INFOPLIST_FILE = iOS/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
@@ -311,6 +321,7 @@
 				CODE_SIGN_ENTITLEMENTS = iOS/Aegis.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
+				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				INFOPLIST_FILE = iOS/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;

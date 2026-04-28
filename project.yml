@@ -40,8 +40,16 @@ targets:
 
     sources:
       - path: iOS/Sources
+      # Resources is a *group*, not a folder reference. The
+      # difference matters: a group lets Xcode see Assets.xcassets
+      # as an asset-catalog source and run `actool` on it,
+      # producing the compiled Assets.car + AppIcon variants the
+      # iOS install service expects. With `type: folder`, Xcode
+      # would copy the directory verbatim, leaving the iOS
+      # Install Services framework with no AppIcon to register —
+      # which surfaces (misleadingly) as "Missing bundle ID" at
+      # install time.
       - path: iOS/Resources
-        type: folder
 
     info:
       path: iOS/Info.plist
@@ -49,11 +57,20 @@ targets:
         CFBundleDisplayName: Aegis
         CFBundleShortVersionString: "0.0.8"
         CFBundleVersion: "1"
+        # iOS-required: declares this is a phone app rather
+        # than a Catalyst-style cross-platform binary. Without
+        # this, iOS Simulator install services can fail with
+        # confusing "Missing bundle ID" errors even though
+        # CFBundleIdentifier is set correctly.
+        LSRequiresIPhoneOS: true
         UILaunchScreen:
           UIColorName: AccentColor
+        # SwiftUI App-protocol apps don't need an explicit
+        # UISceneConfigurations — SwiftUI manages scenes
+        # itself. We still publish UIApplicationSceneManifest
+        # so iOS recognises the app as scene-based.
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
-          UISceneConfigurations: {}
         UIRequiredDeviceCapabilities:
           - arm64
         UISupportedInterfaceOrientations:
@@ -106,6 +123,15 @@ targets:
         SWIFT_STRICT_CONCURRENCY: complete
         # No bitcode — Apple deprecated it in Xcode 14.
         ENABLE_BITCODE: NO
+        # Xcode 16+'s "Debug Dylib" feature splits the app
+        # binary into a thin shim + a dylib for faster Debug
+        # rebuilds. iOS 26 Simulator's install service has
+        # been observed to reject the resulting bundle layout
+        # with a confusing "Missing bundle ID" error even when
+        # the bundle ID is correctly set in Info.plist. Disable
+        # the feature so we ship a single-file executable in
+        # both Debug and Release.
+        ENABLE_DEBUG_DYLIB: NO
 
     dependencies:
       - package: Aegis
