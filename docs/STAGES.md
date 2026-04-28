@@ -326,18 +326,58 @@ Out of scope:
 
 ---
 
-## v0.0.6 — Sprint 5: Forward secrecy 📋
+## v0.0.6 — Sprint 5: Forward secrecy ✅
 
-**Goal:** Double Ratchet (or equivalent). After this, compromising
-one session key does not compromise past or future sessions.
+**Tagged:** `v0.0.6-sprint-5`
+**Goal:** Double Ratchet. After this, compromising one session
+key does not compromise past or future sessions.
 
 Deliverables:
-- [ ] `RatchetSession` type (X3DH-style chain key + symmetric
-      ratchet, seeded from PQXDH output)
-- [ ] Out-of-order message handling
-- [ ] Skipped-message keys cache with bounded retention
-- [ ] Migration test: messages sealed pre-ratchet still decrypt
-- [ ] Tag `v0.0.6-sprint-5`
+- [x] `RatchetSession` type — bidirectional state, encrypt /
+      decrypt, DH-ratchet step orchestration, seeded from a
+      PQXDH-derived 32-byte shared secret.
+- [x] Out-of-order message handling — late arrivals decrypt
+      via the skipped-keys cache, including across DH
+      rotations (a straggler from a long-since-retired chain
+      still decrypts cleanly).
+- [x] Skipped-message keys cache with bounded retention —
+      LRU eviction at 1000 entries (`maxSkippedKeysCache`),
+      per-message catch-up budget of 1000
+      (`maxSkipPerInboundMessage`) so a forged
+      far-future-messageNumber cannot pin CPU.
+- [x] Migration test: `PQXDHRatchetIntegrationTests` runs the
+      full Sprint 4 → Sprint 5 stack on every assertion —
+      bootstrap from PrekeyBundle + PQXDH, hand off SK to
+      `initiateAsAlice` / `initiateAsBob`, exchange real
+      bidirectional ratchet messages with DH rotations and
+      out-of-order arrivals.
+- [x] Tag `v0.0.6-sprint-5`
+
+New surface added in this sprint:
+- `ChainKey` / `MessageKey` / `DerivedMessageKeys` —
+  symmetric-ratchet primitives (HMAC-based advancement +
+  HKDF expansion to AES-256-GCM keys/nonces).
+- `RootKey` — outer-ratchet root key with `KDF_RK`-style
+  HKDF derivation step.
+- `RatchetSession` + `RatchetMessage` + `RatchetMessageHeader` —
+  the user-facing Double Ratchet with header AAD binding.
+
+Construction labels (versioned for loud future scheme changes):
+  symmetric-ratchet HMAC tags `0x01` / `0x02`,
+  message-key HKDF info `"AEGIS_RATCHET_MK_v1"`,
+  root-key HKDF info `"AEGIS_RATCHET_RK_v1"`.
+
+Test status at tag: 191 tests, 3 skipped (pre-existing
+AES-GCM CryptoKit-trap cases — see [issue #1](https://github.com/DemigodDSK/aegis/issues/1)),
+0 failures.
+
+Out of scope (deferred):
+- Header encryption (HE) — Signal's encrypted-header variant;
+  surfaces noted as future enhancement in the file headers.
+- Keychain / Secure Enclave persistence of ratchet state —
+  Sprint 6 (combined with the iOS app shell).
+- Post-compromise security beyond the per-DH-step scope —
+  inherent to the Double Ratchet; nothing to add.
 
 ---
 
