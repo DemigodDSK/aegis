@@ -180,55 +180,151 @@ users can opt into.
 
 ---
 
-## v0.0.4 — Sprint 3: Identity, signatures, and key exchange 📋
+## v0.0.4 — Sprint 3: ML-DSA-65 signatures 🚧
 
-**Goal:** Aegis can establish a secure session between two parties
-who have never communicated before. End-to-end E2EE becomes
-genuinely real.
+**Goal:** ship Aegis's first post-quantum signature primitive.
+Standalone signatures unlock identity bootstrap, prekey signing,
+and any future protocol that needs authenticated artefacts.
 
 Deliverables:
-- [ ] `Signature` protocol + `Sources/AegisCrypto/Tier1/MLDSA65.swift`
-- [ ] Per-user identity keypair generation, stored in iOS Keychain
-- [ ] PQXDH-style key-exchange handshake (or a custom equivalent
-      reviewed by the Council if the literature is thin)
-- [ ] Safety-number derivation (Signal-compatible format)
+- [ ] `Signature` protocol (parallel to `Encryption` and
+      `KeyEncapsulation`)
+- [ ] `Sources/AegisCrypto/Tier1/MLDSA65.swift` — thin wrapper
+      over Apple's `CryptoKit.MLDSA65`
+- [ ] NIST FIPS 204 KAT vectors passing — KeyGen plus the
+      Sign/Verify subset Apple's API permits, mirrored from
+      BoringSSL's NIST ACVP corpus where available
 - [ ] Tag `v0.0.4-sprint-3`
+
+Out of scope (deferred by the split below):
+- Identity keypair persistence (Keychain) — Sprint 6, bundled
+  with the iOS app shell that exercises it.
+- PQXDH key-exchange handshake — Sprint 4.
+- Safety-number derivation — Sprint 4.
+
+### Conscious deviation — split Sprint 3 into 3 (signatures) and 4 (PQXDH)
+
+**Original plan (this document, pre-2026-04-27 second amendment):**
+single Sprint 3 (`v0.0.4-sprint-3`) covering signatures, identity
+keypair + Keychain, PQXDH-style handshake, and safety numbers.
+
+**Revised plan:** split into two sprints (each subsequent sprint
+shifts by one version slot), and bundle Keychain integration with
+the iOS app shell that actually exercises it:
+
+  - v0.0.4 / Sprint 3 — ML-DSA-65 signatures only.
+  - v0.0.5 / Sprint 4 — PQXDH key exchange + safety numbers
+    (NEW; was forward secrecy).
+  - v0.0.6 / Sprint 5 — Forward secrecy / Double Ratchet
+    (was Sprint 4).
+  - v0.0.7 / Sprint 6 — iOS app shell + Keychain identity-key
+    persistence (was Sprint 5; Keychain pulled in from old
+    Sprint 3).
+  - v0.0.8 / Sprint 7 — Persistence (was Sprint 6).
+  - v0.0.9 / Sprint 8 — Networking (was Sprint 7).
+  - v0.1.0 / Sprint 9 — First public alpha (was Sprint 8).
+
+**Why the change:**
+
+1. **Keychain without a runtime is speculative infrastructure.**
+   iOS Keychain has policy choices (SE-backed, biometric, iCloud
+   sync) that warrant the app context they protect. Sprint 6
+   (iOS app shell) is when those choices become concrete.
+2. **Signatures are independent.** ML-DSA-65 is useful before any
+   protocol layer needs it (tests, future tooling), and is a
+   short primitive wrap mirroring Sprint 2's HybridKEM. No
+   reason to gate it behind PQXDH design work.
+3. **PQXDH design deserves a sprint.** Defining bundle types,
+   initial-message wire format, and the DH chain interleaving is
+   genuinely a sprint of work, not a same-sprint task.
+4. **Forward secrecy logically follows PQXDH** (the ratchet needs
+   a session to rotate from), so reordering v0.0.5/v0.0.6
+   improves the build order rather than disturbing it.
+
+**What we are giving up:**
+
+- Each downstream sprint's version number shifts by 1 (v0.0.5
+  → v0.0.6 etc.). The *content* of each sprint stays the same;
+  only the numbering moves.
+- v0.1.0 (TestFlight alpha) drifts one sprint later. Aegis
+  acknowledged from the outset (MISSION.md) that we will trade
+  timeline for correctness, not the reverse.
+
+**Approval:** `pre-council-approval`, Maintainer (@DemigodDSK),
+2026-04-27.
 
 ---
 
-## v0.0.5 — Sprint 4: Forward secrecy 📋
+## v0.0.5 — Sprint 4: PQXDH key exchange + safety numbers 📋
+
+**Goal:** Aegis can establish a secure session between two
+parties who have never communicated before. After this sprint,
+end-to-end E2EE bootstrap becomes genuinely real.
+
+Deliverables:
+- [ ] PQXDH-style key-exchange handshake. Reference: Signal's
+      "PQXDH: Post-Quantum Extended Diffie-Hellman" paper. Where
+      our primitive choices differ from Signal's (e.g. we may
+      use HybridKEM where they use bare ML-KEM-768), the
+      deviations are documented in THREAT-MODEL.md.
+- [ ] Identity, signed-prekey, one-time-prekey, and PQ-KEM
+      prekey types with explicit wire format and lifetimes.
+- [ ] Initial-message format with signature-chain verification.
+- [ ] Per-user identity keypair generation (in-memory only —
+      Keychain persistence arrives in Sprint 6).
+- [ ] Safety-number derivation (Signal-compatible numeric
+      fingerprint over both parties' identity keys).
+- [ ] PQXDH KAT vectors passing — interop test against a
+      reference implementation if one is available
+      (e.g. libsignal). Otherwise deterministic round-trip
+      tests with documented inputs.
+- [ ] Tag `v0.0.5-sprint-4`
+
+Out of scope:
+- Forward secrecy ratcheting — Sprint 5.
+- Network transport — Sprint 8.
+
+---
+
+## v0.0.6 — Sprint 5: Forward secrecy 📋
 
 **Goal:** Double Ratchet (or equivalent). After this, compromising
 one session key does not compromise past or future sessions.
 
 Deliverables:
-- [ ] `RatchetSession` type (X3DH chain key + symmetric ratchet)
+- [ ] `RatchetSession` type (X3DH-style chain key + symmetric
+      ratchet, seeded from PQXDH output)
 - [ ] Out-of-order message handling
 - [ ] Skipped-message keys cache with bounded retention
 - [ ] Migration test: messages sealed pre-ratchet still decrypt
-- [ ] Tag `v0.0.5-sprint-4`
-
----
-
-## v0.0.6 — Sprint 5: iOS app shell 📋
-
-**Goal:** first visible Aegis. A SwiftUI app target that lets a
-user enter a passphrase, encrypt a string, and decrypt it back.
-No networking yet — purely demonstrating the cryptographic stack
-in a UI.
-
-Deliverables:
-- [ ] `Sources/AegisApp/` SwiftUI target
-- [ ] One screen: input passphrase → encrypt → display payload → decrypt
-- [ ] Settings → Security view rendering the live capability table
-      from THREAT-MODEL.md
-- [ ] Onboarding flow per THREAT-MODEL.md "In-app honesty" section
-      (3 mandatory screens)
 - [ ] Tag `v0.0.6-sprint-5`
 
 ---
 
-## v0.0.7 — Sprint 6: Persistence and local conversations 📋
+## v0.0.7 — Sprint 6: iOS app shell + Keychain identity 📋
+
+**Goal:** first visible Aegis. A SwiftUI app target that
+demonstrates the full cryptographic stack in a UI, AND
+introduces persistent identity keys backed by the iOS Keychain
+(or Secure Enclave where applicable).
+
+Deliverables:
+- [ ] `Sources/AegisApp/` SwiftUI target (iOS + macOS Catalyst)
+- [ ] Demo screen: passphrase → encrypt → display payload →
+      decrypt
+- [ ] Settings → Security view rendering the live capability
+      table from THREAT-MODEL.md
+- [ ] Onboarding flow per THREAT-MODEL.md "In-app honesty"
+      section (3 mandatory screens)
+- [ ] AegisStorage module: Keychain wrapper for identity
+      keypairs and signed prekeys; SE-backed
+      `SecureEnclave.MLKEM768` and `SecureEnclave.MLKEM1024`
+      where supported; explicit access-control choices
+- [ ] Tag `v0.0.7-sprint-6`
+
+---
+
+## v0.0.8 — Sprint 7: Persistence and local conversations 📋
 
 **Goal:** persist encrypted messages between two locally-defined
 users. Still no networking.
@@ -237,11 +333,11 @@ Deliverables:
 - [ ] CoreData (or equivalent) schema for conversations and messages
 - [ ] All on-disk message bodies are AEAD-protected
 - [ ] Per-conversation algorithm selector (Tier 1 only at this stage)
-- [ ] Tag `v0.0.7-sprint-6`
+- [ ] Tag `v0.0.8-sprint-7`
 
 ---
 
-## v0.0.8 — Sprint 7: Networking 📋
+## v0.0.9 — Sprint 8: Networking 📋
 
 **Goal:** two real iPhones can exchange messages. The transport
 layer arrives.
@@ -256,11 +352,11 @@ Deliverables:
 - [ ] Transport layer with retries and backoff
 - [ ] Server-side: stores ciphertext only, never sees plaintext
 - [ ] Acknowledged delivery
-- [ ] Tag `v0.0.8-sprint-7`
+- [ ] Tag `v0.0.9-sprint-8`
 
 ---
 
-## v0.1.0 — Sprint 8: First public alpha 📋
+## v0.1.0 — Sprint 9: First public alpha 📋
 
 **Goal:** something a user can install via TestFlight and use to
 chat with one other person.
