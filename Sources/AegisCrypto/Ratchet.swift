@@ -141,3 +141,64 @@ public struct DerivedMessageKeys: Sendable {
         self.nonce = nonce
     }
 }
+
+// MARK: - Root key (DH ratchet)
+//
+// The Double Ratchet's outer ratchet, advancing each time a
+// peer sends a message with a fresh DH public key. The root
+// key carries entropy *forward* across DH steps; the chain key
+// carries entropy *outward* across messages within a chain.
+//
+// Construction (Signal Double Ratchet `KDF_RK`):
+//
+//   RK_new || CK_new = HKDF-SHA-256(
+//       salt = RK_old,
+//       ikm  = DH(our_priv, peer_pub),
+//       info = "AEGIS_RATCHET_RK_v1",
+//       L    = 64
+//   )
+//
+// `RK_new` becomes the next iteration's salt; `CK_new` seeds
+// either the sending or receiving symmetric ratchet (commit 3
+// orchestrates which is which).
+
+/// A 32-byte Double-Ratchet root key. Advances on every DH
+/// step; each advance also produces the chain key for the new
+/// half of the bidirectional session.
+public struct RootKey: Sendable, Equatable {
+    public static let byteCount = 32
+    public let bytes: Data
+
+    public init(bytes: Data) {
+        precondition(
+            bytes.count == RootKey.byteCount,
+            "RootKey must be exactly \(RootKey.byteCount) bytes; got \(bytes.count)"
+        )
+        self.bytes = bytes
+    }
+
+    /// Perform one DH-ratchet step. Mixes the current root key
+    /// with `dhOutput` (the 32-byte X25519 shared secret from
+    /// the new DH pair) and returns the next root key plus the
+    /// chain key for the new symmetric ratchet.
+    ///
+    /// Pure function; same inputs always produce the same
+    /// outputs. Two DH steps with the same `dhOutput` against
+    /// distinct root keys MUST produce distinct outputs (HKDF
+    /// salt does its job).
+    public func ratchet(with dhOutput: Data) -> (root: RootKey, chain: ChainKey) {
+        let derived = HKDF<SHA256>.deriveKey(
+            inputKeyMaterial: SymmetricKey(data: dhOutput),
+            salt: bytes,
+            info: Self.hkdfInfo,
+            outputByteCount: RootKey.byteCount + ChainKey.byteCount
+        )
+        let raw = derived.withUnsafeBytes { Data($0) }
+        return (
+            root: RootKey(bytes: raw.prefix(RootKey.byteCount)),
+            chain: ChainKey(bytes: raw.suffix(ChainKey.byteCount))
+        )
+    }
+
+    private static let hkdfInfo = Data("AEGIS_RATCHET_RK_v1".utf8)
+}

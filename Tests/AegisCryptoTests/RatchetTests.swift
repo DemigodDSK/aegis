@@ -148,4 +148,85 @@ final class RatchetTests: XCTestCase {
             "message-key drift"
         )
     }
+
+    // MARK: - RootKey ratchet step
+
+    func testRootKey_ratchet_isDeterministic() {
+        let rk = RootKey(bytes: Data(repeating: 0xDD, count: 32))
+        let dh = Data(repeating: 0xEE, count: 32)
+        let a = rk.ratchet(with: dh)
+        let b = rk.ratchet(with: dh)
+        XCTAssertEqual(a.root, b.root)
+        XCTAssertEqual(a.chain, b.chain)
+    }
+
+    func testRootKey_ratchet_distinguishesNextRootAndChain() {
+        // The two halves of HKDF output must differ (otherwise
+        // collapsing). Cheap sanity check.
+        let rk = RootKey(bytes: Data(repeating: 0x11, count: 32))
+        let (root, chain) = rk.ratchet(with: Data(repeating: 0x22, count: 32))
+        XCTAssertNotEqual(root.bytes, chain.bytes)
+    }
+
+    func testRootKey_ratchet_distinctDHOutputs_yieldDistinctState() {
+        let rk = RootKey(bytes: Data(repeating: 0x33, count: 32))
+        let a = rk.ratchet(with: Data(repeating: 0x44, count: 32))
+        let b = rk.ratchet(with: Data(repeating: 0x55, count: 32))
+        XCTAssertNotEqual(a.root, b.root)
+        XCTAssertNotEqual(a.chain, b.chain)
+    }
+
+    func testRootKey_ratchet_distinctRoots_yieldDistinctState() {
+        // Same DH output, different starting RK — outputs must
+        // differ. Verifies that the salt parameter (the old
+        // RK) actually contributes entropy.
+        let dh = Data(repeating: 0x66, count: 32)
+        let rk1 = RootKey(bytes: Data(repeating: 0xAA, count: 32))
+        let rk2 = RootKey(bytes: Data(repeating: 0xBB, count: 32))
+        let a = rk1.ratchet(with: dh)
+        let b = rk2.ratchet(with: dh)
+        XCTAssertNotEqual(a.root, b.root)
+        XCTAssertNotEqual(a.chain, b.chain)
+    }
+
+    func testRootKey_ratchet_endToEnd_withX25519Output() throws {
+        // Two parties with mirrored X25519 keypairs ratchet
+        // from the same starting RK. Both sides must derive
+        // the same (next root, next chain).
+        let alice = X25519.generateKeyPair()
+        let bob = X25519.generateKeyPair()
+        let dhAlice = try X25519.sharedSecret(
+            privateKey: alice.privateKey, peerPublicKey: bob.publicKey
+        )
+        let dhBob = try X25519.sharedSecret(
+            privateKey: bob.privateKey, peerPublicKey: alice.publicKey
+        )
+        XCTAssertEqual(dhAlice, dhBob, "X25519 must agree to start")
+
+        let rk = RootKey(bytes: Data(repeating: 0x77, count: 32))
+        let aliceStep = rk.ratchet(with: dhAlice)
+        let bobStep = rk.ratchet(with: dhBob)
+        XCTAssertEqual(aliceStep.root, bobStep.root)
+        XCTAssertEqual(aliceStep.chain, bobStep.chain)
+    }
+
+    func testKAT_pinnedRootKeyRatchet() {
+        let rk = RootKey(bytes: Data(repeating: 0xCC, count: 32))
+        let dh = Data(repeating: 0xDD, count: 32)
+        let (root, chain) = rk.ratchet(with: dh)
+
+        let rootHex = root.bytes.map { String(format: "%02x", $0) }.joined()
+        let chainHex = chain.bytes.map { String(format: "%02x", $0) }.joined()
+
+        XCTAssertEqual(
+            rootHex,
+            "fa3d063c6a20c0ad135fc7bf918d944205cac253a028a3ab8c725ec59e0224ed",
+            "DH-ratchet root-key drift"
+        )
+        XCTAssertEqual(
+            chainHex,
+            "2617131fabb6c74efdee4260fd4dcf2618383df7e9dc480c48152a9e42af6c9e",
+            "DH-ratchet chain-key drift"
+        )
+    }
 }
