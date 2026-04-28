@@ -28,8 +28,21 @@ auditability; Apple's CryptoKit `MLKEM768.PrivateKey` does not
 accept a raw FIPS 203 `dk` byte representation as input (its
 `integrityCheckedRepresentation` form is seed + HMAC, not the
 expanded key), so the decap vectors are not currently consumed by
-a Swift test. Sprint 4 forward-secrecy work may revisit decap-KAT
-coverage if we add an alternate key import path.
+a Swift test.
+
+## ML-KEM-1024 — NIST FIPS 203
+
+NIST ACVP-derived KeyGen vectors for ML-KEM-1024 (Category 5,
+the parameter set Aegis uses inside PQXDH).
+
+| File | Source | Pinned commit | SHA-256 |
+|---|---|---|---|
+| `mlkem1024_nist_keygen_tests.txt` | `google/boringssl @ crypto/mlkem/mlkem1024_nist_keygen_tests.txt` | [`500fa1f9`](https://github.com/google/boringssl/blob/500fa1f9d274d06ddfc112e1815ad5dc5ce92234/crypto/mlkem/mlkem1024_nist_keygen_tests.txt) | `d79447a0560531b578a3f642837c6c586402827ea1bbc97fb2750a98b15fe7f4` |
+
+25 KeyGen vectors in the same `(z, d, ek, dk)` flat-key/value
+format as ML-KEM-768. Sizes: ek = 1568 B, dk = 3168 B. Decap
+KATs are not shipped for the same Apple-API reason as ML-KEM-768
+(no raw-dk import path).
 
 ## X-Wing — IETF draft-connolly-cfrg-xwing-kem
 
