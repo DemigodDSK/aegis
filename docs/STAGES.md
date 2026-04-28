@@ -180,21 +180,38 @@ users can opt into.
 
 ---
 
-## v0.0.4 — Sprint 3: ML-DSA-65 signatures 🚧
+## v0.0.4 — Sprint 3: ML-DSA-65 signatures ✅
 
+**Tagged:** `v0.0.4-sprint-3`
 **Goal:** ship Aegis's first post-quantum signature primitive.
 Standalone signatures unlock identity bootstrap, prekey signing,
 and any future protocol that needs authenticated artefacts.
 
 Deliverables:
-- [ ] `Signature` protocol (parallel to `Encryption` and
+- [x] `Signature` protocol (parallel to `Encryption` and
       `KeyEncapsulation`)
-- [ ] `Sources/AegisCrypto/Tier1/MLDSA65.swift` — thin wrapper
-      over Apple's `CryptoKit.MLDSA65`
-- [ ] NIST FIPS 204 KAT vectors passing — KeyGen plus the
-      Sign/Verify subset Apple's API permits, mirrored from
-      BoringSSL's NIST ACVP corpus where available
-- [ ] Tag `v0.0.4-sprint-3`
+- [x] `Sources/AegisCrypto/Tier1/MLDSA65.swift` — `MLDSA65Signature`
+      wrapping Apple's `CryptoKit.MLDSA65`
+- [x] NIST FIPS 204 KeyGen KAT vectors passing — 25 vectors
+      mirrored from BoringSSL's NIST-ACVP corpus
+- [x] Wycheproof verify-side KAT vectors passing — 160 tests
+      across 24 groups including malformed-key, edge-case, and
+      FIPS 204 context-extension cases
+- [x] Tag `v0.0.4-sprint-3`
+
+Test status at tag: 73 tests, 3 skipped (pre-existing AES-GCM
+CryptoKit-trap cases — see [issue #1](https://github.com/DemigodDSK/aegis/issues/1)),
+0 failures.
+
+Out of scope (deferred by the split below):
+- Identity keypair persistence (Keychain) — Sprint 6, bundled
+  with the iOS app shell that exercises it.
+- PQXDH key-exchange handshake — Sprint 4.
+- Safety-number derivation — Sprint 4.
+- FIPS 204 "context" extension at the public Signature
+  protocol — held until a concrete user (Sprint 4 PQXDH) shows
+  up. The underlying CryptoKit primitive supports it and the
+  Wycheproof KATs already exercise it directly.
 
 Out of scope (deferred by the split below):
 - Identity keypair persistence (Keychain) — Sprint 6, bundled
