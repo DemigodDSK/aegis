@@ -29,17 +29,27 @@ public struct RootView: View {
 
             content
                 .foregroundStyle(AegisTheme.textPrimary)
-                .padding(AegisTheme.screenPadding)
         }
+        // Aegis is dark-first by design (see Theme.swift's
+        // header comment). Force the colour scheme at the
+        // root so the iOS-default light-mode background of
+        // TabView, ScrollView etc. doesn't bleed through and
+        // turn our charcoal screens white-on-white.
+        .preferredColorScheme(.dark)
     }
 
     @ViewBuilder
     private var content: some View {
         if !state.onboardingCompleted {
             OnboardingFlow(state: state)
+                .padding(AegisTheme.screenPadding)
         } else if state.identity == nil {
             IdentitySetupScreen(state: state)
+                .padding(AegisTheme.screenPadding)
         } else {
+            // No outer padding on the TabView — the bar
+            // itself needs to extend to the screen edges,
+            // and each tab handles its own content padding.
             MainTabView(state: state)
         }
     }
