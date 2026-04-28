@@ -16,15 +16,24 @@ earned by transparency, not asserted.
 
 ## Status
 
-This project is in early development. Current version: **pre-0.1**.
+This project is in early development. Current version: **pre-0.1**
+(library only — no installable app yet).
 
 | Milestone | Status |
 |---|---|
-| Foundational documents (this repo) | ✅ Published |
-| First working build | 🚧 In progress |
+| Foundational documents | ✅ [`v0.0.1-foundation`](https://github.com/DemigodDSK/aegis/releases/tag/v0.0.1-foundation) |
+| Maintainer PGP identity + signed warrant canary | ✅ [`v0.0.2.2-pgp`](https://github.com/DemigodDSK/aegis/releases/tag/v0.0.2.2-pgp) |
+| Cryptographic core: AES-256-GCM | ✅ [`v0.0.2-sprint-1`](https://github.com/DemigodDSK/aegis/releases/tag/v0.0.2-sprint-1) |
+| Cryptographic core: PQ hybrid KEM (X-Wing / ML-KEM-768 + X25519) | ✅ [`v0.0.3-sprint-2`](https://github.com/DemigodDSK/aegis/releases/tag/v0.0.3-sprint-2) |
+| Cryptographic core: PQ signatures (ML-DSA-65) | ✅ [`v0.0.4-sprint-3`](https://github.com/DemigodDSK/aegis/releases/tag/v0.0.4-sprint-3) |
+| PQXDH key exchange + safety numbers | 📋 Sprint 4 ([#4](https://github.com/DemigodDSK/aegis/issues/4)) |
+| Forward secrecy / Double Ratchet | 📋 Sprint 5 ([#5](https://github.com/DemigodDSK/aegis/issues/5)) |
+| iOS app shell + Keychain identity | 📋 Sprint 6 ([#6](https://github.com/DemigodDSK/aegis/issues/6)) |
+| v0.1 alpha (TestFlight, library + app + transport) | 📋 Sprint 9 |
+| External security audit | 📋 v1.0 |
 | Initial Security Council | 🚧 Recruiting (see [GOVERNANCE.md](GOVERNANCE.md)) |
-| v0.1 alpha (PQ key exchange + AES-GCM messaging) | Planned |
-| External security audit | Planned for v1.0 |
+
+Detailed per-sprint roadmap: [docs/STAGES.md](docs/STAGES.md).
 
 ## What Aegis is, in one paragraph
 
@@ -59,14 +68,24 @@ In order:
 
 ## Build and run
 
-(Coming with v0.1.)
+The cryptographic library (`AegisCrypto`) builds and tests with
+stock SwiftPM today. The iOS app target arrives at Sprint 6
+(v0.0.7).
 
 ```bash
-# Eventually:
+# Library + tests — runs today.
 swift build
 swift test
-open Aegis.xcodeproj
+# Expected at v0.0.4-sprint-3: 73 tests passing, 3 skipped, 0 failures.
+
+# iOS app shell — coming at Sprint 6 (v0.0.7).
+# open Aegis.xcodeproj
 ```
+
+Requires Xcode 26 / Swift 6.2+ on macOS 26 — Apple's native
+post-quantum CryptoKit primitives (`MLKEM768`, `MLDSA65`,
+`XWingMLKEM768X25519`) are gated `@available(iOS 26.0, macOS
+26.0, ...)`, so the SwiftPM platform floor follows them.
 
 ## License
 

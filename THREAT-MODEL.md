@@ -155,6 +155,13 @@ For our security guarantees to hold, you must trust:
 
 ## Cryptographic guarantees by version
 
+This table commits to user-facing capability per **app release**.
+Pre-v0.1 versions (`v0.0.x`) ship the cryptographic primitives
+listed below incrementally as a Swift library (see
+[README.md](README.md) "Status"); there is no installable app yet.
+The first column reflects what we promise the moment a user can
+install Aegis on a phone.
+
 | Guarantee | v0.1 | v0.5 | v1.0 |
 |---|:---:|:---:|:---:|
 | End-to-end encryption (Tier 1) | YES | YES | YES |
