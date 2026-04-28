@@ -26,9 +26,12 @@ xcuserdata/
 Packages/
 Package.pins
 Package.resolved
-*.xcworkspace
-!default.xcworkspace
 .netrc
+
+# Xcode top-level workspaces (the project.xcworkspace nested
+# inside *.xcodeproj IS committed — it carries the SwiftPM
+# package-graph references the project depends on).
+/*.xcworkspace
 
 # Swift / iOS build artifacts
 *.hmap
