@@ -38,6 +38,10 @@ let package = Package(
             name: "AegisStorage",
             targets: ["AegisStorage"]
         ),
+        .library(
+            name: "AegisApp",
+            targets: ["AegisApp"]
+        ),
     ],
     dependencies: [
         // No external dependencies. CryptoKit (including its native
@@ -57,6 +61,11 @@ let package = Package(
             dependencies: ["AegisCrypto"],
             path: "Sources/AegisStorage"
         ),
+        .target(
+            name: "AegisApp",
+            dependencies: ["AegisCrypto", "AegisStorage"],
+            path: "Sources/AegisApp"
+        ),
         .testTarget(
             name: "AegisCryptoTests",
             dependencies: ["AegisCrypto"],
@@ -72,6 +81,11 @@ let package = Package(
             name: "AegisStorageTests",
             dependencies: ["AegisStorage"],
             path: "Tests/AegisStorageTests"
+        ),
+        .testTarget(
+            name: "AegisAppTests",
+            dependencies: ["AegisApp"],
+            path: "Tests/AegisAppTests"
         ),
     ]
 )
