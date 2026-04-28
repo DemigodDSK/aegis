@@ -26,10 +26,13 @@ This project is in early development. Current version: **pre-0.1**
 | Cryptographic core: AES-256-GCM | ✅ [`v0.0.2-sprint-1`](https://github.com/DemigodDSK/aegis/releases/tag/v0.0.2-sprint-1) |
 | Cryptographic core: PQ hybrid KEM (X-Wing / ML-KEM-768 + X25519) | ✅ [`v0.0.3-sprint-2`](https://github.com/DemigodDSK/aegis/releases/tag/v0.0.3-sprint-2) |
 | Cryptographic core: PQ signatures (ML-DSA-65) | ✅ [`v0.0.4-sprint-3`](https://github.com/DemigodDSK/aegis/releases/tag/v0.0.4-sprint-3) |
-| PQXDH key exchange + safety numbers | 📋 Sprint 4 ([#4](https://github.com/DemigodDSK/aegis/issues/4)) |
-| Forward secrecy / Double Ratchet | 📋 Sprint 5 ([#5](https://github.com/DemigodDSK/aegis/issues/5)) |
-| iOS app shell + Keychain identity | 📋 Sprint 6 ([#6](https://github.com/DemigodDSK/aegis/issues/6)) |
-| v0.1 alpha (TestFlight, library + app + transport) | 📋 Sprint 9 |
+| PQXDH key exchange + safety numbers | ✅ [`v0.0.5-sprint-4`](https://github.com/DemigodDSK/aegis/releases/tag/v0.0.5-sprint-4) |
+| Forward secrecy / Double Ratchet | ✅ [`v0.0.6-sprint-5`](https://github.com/DemigodDSK/aegis/releases/tag/v0.0.6-sprint-5) |
+| iOS app shell + Keychain identity (macOS demo runs today) | ✅ [`v0.0.7-sprint-6`](https://github.com/DemigodDSK/aegis/releases/tag/v0.0.7-sprint-6) |
+| iOS distribution (Xcode project + IPA + TestFlight) | 📋 Sprint 7 |
+| Persistence + local conversations | 📋 Sprint 8 |
+| Networking | 📋 Sprint 9 |
+| v0.1 alpha (external testers) | 📋 Sprint 10 |
 | External security audit | 📋 v1.0 |
 | Initial Security Council | 🚧 Recruiting (see [GOVERNANCE.md](GOVERNANCE.md)) |
 

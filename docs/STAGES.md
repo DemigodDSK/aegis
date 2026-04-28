@@ -241,6 +241,11 @@ the iOS app shell that actually exercises it:
   - v0.0.9 / Sprint 8 — Networking (was Sprint 7).
   - v0.1.0 / Sprint 9 — First public alpha (was Sprint 8).
 
+**Note:** subsequent slots were further amended by the
+Sprint 6 → 7 split (see the v0.0.8 deviation below). Current
+mapping is: Sprint 7 = iOS distribution, Sprint 8 =
+Persistence, Sprint 9 = Networking, Sprint 10 = alpha.
+
 **Why the change:**
 
 1. **Keychain without a runtime is speculative infrastructure.**
@@ -322,7 +327,7 @@ AES-GCM CryptoKit-trap cases — see [issue #1](https://github.com/DemigodDSK/ae
 
 Out of scope:
 - Forward secrecy ratcheting — Sprint 5.
-- Network transport — Sprint 8.
+- Network transport — Sprint 9.
 
 ---
 
@@ -446,13 +451,96 @@ AES-GCM CryptoKit-trap cases — see [issue #1](https://github.com/DemigodDSK/ae
 0 failures.
 
 Out of scope:
-- Persistent message storage — Sprint 7 (was Sprint 6 before
-  the Sprint 3 split).
-- Network transport — Sprint 8.
+- Persistent message storage — Sprint 8 (after the
+  Sprint 6 → 7 split below).
+- Network transport — Sprint 9.
 
 ---
 
-## v0.0.8 — Sprint 7: Persistence and local conversations 📋
+## v0.0.8 — Sprint 7: iOS distribution (Xcode + IPA + TestFlight) 📋
+
+**Goal:** package the SwiftUI surface that Sprint 6 shipped as
+an installable iOS app — Xcode project, signing, App Icon,
+entitlements, App Store Connect setup, and a TestFlight
+build the maintainer can install on their own device.
+
+Deliverables:
+- [ ] `Aegis.xcodeproj` wrapping the AegisApp + AegisStorage
+      + AegisCrypto SwiftPM products
+- [ ] App Icon (1024×1024 + iOS asset-catalog set), splash
+      screen, basic Info.plist
+- [ ] Entitlements: Keychain access group, push-notification
+      capability (no UI consumer yet but provisioned for the
+      Sprint 9 networking sprint)
+- [ ] Code-signing certificate + provisioning profile via
+      App Store Connect (maintainer-only at this stage)
+- [ ] First TestFlight build pushed to internal testers
+      (just the maintainer)
+- [ ] Smoke-test: install on a real iPhone, complete
+      onboarding, generate identity, run encrypt/decrypt
+      demo
+- [ ] Tag `v0.0.8-sprint-7`
+
+### Conscious deviation — split iOS distribution from Sprint 6
+
+**Original plan (this document, pre-2026-04-28 third
+amendment):** Sprint 6 was supposed to deliver "iOS app
+shell + Keychain identity persistence", implicitly via an
+iOS Xcode project + TestFlight pipeline. The Sprint 3 split
+deferred Keychain integration into Sprint 6; iOS
+distribution rode along.
+
+**Revised plan:** the user-visible-app concern is split
+from the IPA-distribution concern.
+
+  - v0.0.7 / Sprint 6 (already shipped): SwiftUI surface
+    (`AegisApp` library + `aegis-demo` macOS executable) +
+    `AegisStorage` Keychain wrapper. Visible app today via
+    `swift run aegis-demo`.
+  - v0.0.8 / Sprint 7 (this entry, NEW): iOS Xcode project
+    + IPA + TestFlight. The SwiftUI views compile for iOS
+    today; this sprint adds the wrapper.
+  - v0.0.9 / Sprint 8: Persistence (was Sprint 7).
+  - v0.0.10 / Sprint 9: Networking (was Sprint 8).
+  - v0.1.0 / Sprint 10: First public alpha (was Sprint 9);
+    "TestFlight build available" deliverable moves to
+    Sprint 7 here.
+
+**Why the change:**
+
+1. **iOS distribution is a sprint of work on its own.**
+   Code-signing, App Store Connect setup, App Icon, splash
+   screen, privacy nutrition labels, screenshots,
+   provisioning profiles — none of these are SwiftUI or
+   cryptography work. Bundling them into Sprint 6 would
+   have made it too big and would have delayed "see the
+   app working".
+2. **A runnable artefact today beats a wrapped IPA later.**
+   The macOS executable shipped in Sprint 6 *is* real
+   Aegis, visible right now. The iOS IPA is the same
+   SwiftUI surface wrapped for the App Store; not a
+   different app.
+3. **"TestFlight build available" was already a v0.1.0
+   deliverable.** Promoting it to Sprint 7 means the alpha
+   sprint can focus on polish, external testers, and the
+   bootstrap-status update — rather than getting the IPA
+   pipeline working.
+
+**What we are giving up:**
+
+- Each downstream sprint's version number shifts by 1
+  (v0.0.9 → v0.0.10, etc). v0.1.0 (alpha) lands at
+  Sprint 10 instead of Sprint 9.
+- `v0.0.10` is a slightly awkward version number. We
+  accept it; the alternative (bundling iOS distribution
+  into the alpha) would dilute both sprints.
+
+**Approval:** `pre-council-approval`, Maintainer
+(@DemigodDSK), 2026-04-28.
+
+---
+
+## v0.0.9 — Sprint 8: Persistence and local conversations 📋
 
 **Goal:** persist encrypted messages between two locally-defined
 users. Still no networking.
@@ -461,11 +549,11 @@ Deliverables:
 - [ ] CoreData (or equivalent) schema for conversations and messages
 - [ ] All on-disk message bodies are AEAD-protected
 - [ ] Per-conversation algorithm selector (Tier 1 only at this stage)
-- [ ] Tag `v0.0.8-sprint-7`
+- [ ] Tag `v0.0.9-sprint-8`
 
 ---
 
-## v0.0.9 — Sprint 8: Networking 📋
+## v0.0.10 — Sprint 9: Networking 📋
 
 **Goal:** two real iPhones can exchange messages. The transport
 layer arrives.
@@ -480,17 +568,18 @@ Deliverables:
 - [ ] Transport layer with retries and backoff
 - [ ] Server-side: stores ciphertext only, never sees plaintext
 - [ ] Acknowledged delivery
-- [ ] Tag `v0.0.9-sprint-8`
+- [ ] Tag `v0.0.10-sprint-9`
 
 ---
 
-## v0.1.0 — Sprint 9: First public alpha 📋
+## v0.1.0 — Sprint 10: First public alpha 📋
 
 **Goal:** something a user can install via TestFlight and use to
-chat with one other person.
+chat with one other person. The TestFlight build itself is
+already available from Sprint 7; this sprint is about polish
+and the first external user.
 
 Deliverables:
-- [ ] TestFlight build available
 - [ ] Onboarding flow polished
 - [ ] At least one external person has used it
 - [ ] First "bootstrap status" public update published
