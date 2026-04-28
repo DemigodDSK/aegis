@@ -114,6 +114,7 @@ simulator run.
 |---|---|---|
 | `xcodebuild: error: iOS 26.x is not installed` | iOS SDK not downloaded | Xcode → Settings → Components → iOS 26.4 → Get |
 | `DVTPlugInLoading` errors / "plugin failed to load" | Xcode framework cache stale after Xcode update | `xcodebuild -runFirstLaunch` |
+| `IXErrorDomain Code 13 / "Missing bundle ID"` at simulator install time, even though `CFBundleIdentifier` is set in Info.plist | Asset catalog wasn't compiled (so `actool` didn't produce `Assets.car` and the `AppIcon` variants), OR the Xcode-16+ Debug Dylib feature is producing a shim+sidecar bundle layout that the iOS-26 install service rejects | Already fixed in `project.yml` at commit 90b55ae: (a) `iOS/Resources` is a *group* not a `type: folder`, (b) `ENABLE_DEBUG_DYLIB: NO`, (c) `LSRequiresIPhoneOS: true`. If you hit this on a fork, regenerate via `xcodegen` and rebuild after a Clean Build Folder. |
 | "Failed to register bundle identifier" | bundle id collides with another app on this signing identity | edit `Aegis.target.PRODUCT_BUNDLE_IDENTIFIER` in `project.yml` (e.g. add `.dev`), run `xcodegen`, retry |
 | Identity / onboarding state survives across re-installs | Keychain entries are scoped to the team-prefixed access group; reinstalling the same app preserves them | use **Settings → Reset everything** (Sprint-7 polish item) or `swift run aegis-demo`'s `state.resetEverything()` API |
 
