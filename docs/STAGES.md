@@ -381,26 +381,74 @@ Out of scope (deferred):
 
 ---
 
-## v0.0.7 — Sprint 6: iOS app shell + Keychain identity 📋
+## v0.0.7 — Sprint 6: iOS app shell + Keychain identity ✅
 
+**Tagged:** `v0.0.7-sprint-6`
 **Goal:** first visible Aegis. A SwiftUI app target that
-demonstrates the full cryptographic stack in a UI, AND
-introduces persistent identity keys backed by the iOS Keychain
-(or Secure Enclave where applicable).
+demonstrates the cryptographic stack in a UI, AND introduces
+persistent identity keys backed by the iOS Keychain.
 
 Deliverables:
-- [ ] `Sources/AegisApp/` SwiftUI target (iOS + macOS Catalyst)
-- [ ] Demo screen: passphrase → encrypt → display payload →
-      decrypt
-- [ ] Settings → Security view rendering the live capability
-      table from THREAT-MODEL.md
-- [ ] Onboarding flow per THREAT-MODEL.md "In-app honesty"
-      section (3 mandatory screens)
-- [ ] AegisStorage module: Keychain wrapper for identity
-      keypairs and signed prekeys; SE-backed
-      `SecureEnclave.MLKEM768` and `SecureEnclave.MLKEM1024`
-      where supported; explicit access-control choices
-- [ ] Tag `v0.0.7-sprint-6`
+- [x] `Sources/AegisApp/` SwiftUI target — `AegisTheme`,
+      `AppState`, `RootView`, `OnboardingFlow`,
+      `IdentitySetupScreen`, `DemoScreen` + `DemoViewModel`,
+      `SettingsScreen`, `Capability`, `MainTabView`. Same
+      surface targets iOS today; Sprint 7 wraps it in an
+      Xcode project for distribution.
+- [x] Demo screen: passphrase → encrypt → display the
+      AES-256-GCM ciphertext envelope (methodId, nonce,
+      ciphertext, tag in monospaced base64) → decrypt.
+      Wrong-passphrase path surfaces AEAD authentication
+      failure cleanly.
+- [x] Settings → Security view rendering the live capability
+      table — 14 rows pulled from `Capability.all`, mirroring
+      THREAT-MODEL.md §"Cryptographic guarantees by version".
+      Drift is partially caught by `CapabilityTests`.
+- [x] Onboarding flow per THREAT-MODEL.md §"In-app honesty"
+      §"First-launch onboarding (mandatory, cannot be
+      skipped)". Three screens, no skip, including the
+      Screen-3 "Use Signal instead" disclosure for
+      life-or-liberty threat models.
+- [x] AegisStorage module — Keychain wrapper for identity
+      keypairs. Defaults to
+      `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`,
+      never sets `kSecAttrSynchronizable` (no iCloud
+      Keychain sync of private keys). Explicit
+      `KeychainAccessibility` enum lets callers opt into
+      `whenUnlockedThisDeviceOnly` /
+      `whenPasscodeSetThisDeviceOnly` per write. Signed
+      prekeys and SE-backed `SecureEnclave.MLKEM768/1024 /
+      MLDSA65` storage paths are scoped for Sprint 7+ when
+      a real persistent peer session needs them.
+- [x] `aegis-demo` macOS executable target — `swift run
+      aegis-demo` opens a real SwiftUI window today.
+- [x] Tag `v0.0.7-sprint-6`
+
+New surface in this sprint:
+- `AegisStorage` library target (Keychain CRUD,
+  `KeychainAccessibility`, `KeychainStorageError`).
+- `AegisApp` library target (SwiftUI views, AppState,
+  Capability, theme).
+- `aegis-demo` executable target.
+
+Conscious deferrals (now their own follow-up issues):
+- iOS Xcode project + TestFlight distribution → Sprint 7.
+  The SwiftUI views work on iOS today; Sprint 7 just adds
+  the .xcodeproj wrapper, signing, and IPA pipeline.
+- SE-backed `SecureEnclave.MLKEM768/1024` and
+  `SecureEnclave.MLDSA65` persistence paths → Sprint 7+ as
+  per-peer ratchet/prekey-bundle persistence is added.
+- Code-gen between THREAT-MODEL.md's capability table and
+  `Capability.all` so the two cannot drift → polish.
+
+Test status at tag: 224 tests, 3 skipped (pre-existing
+AES-GCM CryptoKit-trap cases — see [issue #1](https://github.com/DemigodDSK/aegis/issues/1)),
+0 failures.
+
+Out of scope:
+- Persistent message storage — Sprint 7 (was Sprint 6 before
+  the Sprint 3 split).
+- Network transport — Sprint 8.
 
 ---
 
