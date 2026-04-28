@@ -208,25 +208,117 @@ final class RatchetSessionTests: XCTestCase {
         XCTAssertEqual(recovered, Data("body".utf8))
     }
 
-    // MARK: - Out-of-order is rejected (commit 4 will support)
+    // MARK: - Out-of-order delivery (skipped-keys cache)
 
-    func testOutOfOrder_rejected_forNow() throws {
-        // Alice sends three messages; Bob receives them in
-        // order 0, 2, 1. The second inbound (msg #2) should
-        // throw — current strict-in-order policy.
+    func testOutOfOrder_singleChain_decodesEventually() throws {
+        // Alice sends three messages in one chain. Bob
+        // receives them in order 0, 2, 1. All three must
+        // decrypt to the right plaintext.
         var (alice, bob, _) = try makePair()
         let m0 = try alice.encrypt(Data("zero".utf8))
         let m1 = try alice.encrypt(Data("one".utf8))
         let m2 = try alice.encrypt(Data("two".utf8))
 
-        _ = try bob.decrypt(m0)
-        XCTAssertThrowsError(try bob.decrypt(m2)) { error in
-            guard case AegisError.invalidNonce = error else {
-                return XCTFail("expected .invalidNonce (out-of-order), got \(error)")
-            }
-        }
-        // m1 still works
+        XCTAssertEqual(try bob.decrypt(m0), Data("zero".utf8))
+        // Skip ahead — m2 arrives before m1. The skipped-keys
+        // cache lets m1 still decrypt later.
+        XCTAssertEqual(try bob.decrypt(m2), Data("two".utf8))
         XCTAssertEqual(try bob.decrypt(m1), Data("one".utf8))
+    }
+
+    func testOutOfOrder_acrossDHRotation() throws {
+        // Alice sends two, Bob replies (DH rotates), Alice
+        // sends two more. Bob receives Alice's first chain in
+        // reverse order *after* his reply has already been
+        // ratcheted — the "old chain" keys must be cached
+        // through the DH step so late arrivals still work.
+        var (alice, bob, _) = try makePair()
+
+        let a0 = try alice.encrypt(Data("a-0".utf8))
+        let a1 = try alice.encrypt(Data("a-1".utf8))
+
+        // Bob receives only a0 first; a1 is still in flight.
+        XCTAssertEqual(try bob.decrypt(a0), Data("a-0".utf8))
+
+        // Bob replies, rotating his DH on Alice's side.
+        let b0 = try bob.encrypt(Data("b-0".utf8))
+        XCTAssertEqual(try alice.decrypt(b0), Data("b-0".utf8))
+
+        // Now Alice sends two more in her *new* chain.
+        let a2 = try alice.encrypt(Data("a-2".utf8))
+        let a3 = try alice.encrypt(Data("a-3".utf8))
+        XCTAssertEqual(try bob.decrypt(a2), Data("a-2".utf8))
+        XCTAssertEqual(try bob.decrypt(a3), Data("a-3".utf8))
+
+        // Finally a1 from the old chain straggles in — must
+        // decrypt cleanly using a key cached during Bob's
+        // DH-step catch-up.
+        XCTAssertEqual(try bob.decrypt(a1), Data("a-1".utf8))
+    }
+
+    func testOutOfOrder_excessiveSkip_rejected() throws {
+        // Bob fakes an inbound message claiming a wildly
+        // future messageNumber. Bob (or rather, the receiving
+        // side) must refuse to derive 1M+ keys.
+        var (alice, bob, _) = try makePair()
+        let real = try alice.encrypt(Data("real".utf8))
+
+        let evil = RatchetMessage(
+            header: RatchetMessageHeader(
+                dhPublicKey: real.header.dhPublicKey,
+                previousChainLength: real.header.previousChainLength,
+                messageNumber: 5000  // > maxSkipPerInboundMessage (1000)
+            ),
+            payload: real.payload
+        )
+
+        XCTAssertThrowsError(try bob.decrypt(evil)) { error in
+            guard case AegisError.invalidNonce(let reason) = error else {
+                return XCTFail("expected .invalidNonce, got \(error)")
+            }
+            XCTAssertTrue(reason.contains("skip distance"),
+                          "reason should mention skip distance; got: \(reason)")
+        }
+    }
+
+    func testCache_evictionBound() throws {
+        // Push more than maxSkippedKeysCache messages of skip
+        // across a single chain (via a fake "messageNumber"
+        // jump on the very last message). Cache must stay
+        // bounded.
+        var (alice, bob, _) = try makePair()
+
+        // Send and consume a single message to set the
+        // chains in sync.
+        let first = try alice.encrypt(Data("warm-up".utf8))
+        XCTAssertEqual(try bob.decrypt(first), Data("warm-up".utf8))
+
+        // Alice sends 1000 messages; Bob receives only the
+        // 1000th. Bob caches 999 skipped keys + consumes 1 =
+        // 999 cached after.
+        var lastMsg: RatchetMessage!
+        for i in 0..<RatchetSession.maxSkippedKeysCache {
+            lastMsg = try alice.encrypt(Data("m-\(i)".utf8))
+        }
+        // Receive only the last one — Bob fast-forwards
+        // through 999, caches them all, decrypts the final.
+        XCTAssertEqual(
+            try bob.decrypt(lastMsg),
+            Data("m-\(RatchetSession.maxSkippedKeysCache - 1)".utf8)
+        )
+
+        // Cache must contain at most maxSkippedKeysCache
+        // entries.
+        XCTAssertLessThanOrEqual(
+            bob.skippedKeys.count,
+            RatchetSession.maxSkippedKeysCache,
+            "skipped-keys cache must respect the bound"
+        )
+        XCTAssertEqual(
+            bob.skippedKeys.count,
+            bob.skippedKeysOrder.count,
+            "skippedKeys and skippedKeysOrder must stay in lockstep"
+        )
     }
 
     // MARK: - Wire format

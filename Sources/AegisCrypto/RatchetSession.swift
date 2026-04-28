@@ -81,6 +81,17 @@ public struct RatchetMessageHeader: Sendable, Codable, Equatable {
 /// `encrypt` and `decrypt` advance state. Hold one per peer.
 public struct RatchetSession: Sendable {
 
+    /// Maximum number of skipped message keys we cache. Once
+    /// reached, the oldest keys are evicted (LRU). Bounds
+    /// memory under adversarial out-of-order delivery.
+    public static let maxSkippedKeysCache: Int = 1000
+
+    /// Maximum number of message keys we will derive in a
+    /// single inbound message's catch-up step. A peer
+    /// claiming a far-future messageNumber would otherwise
+    /// pin our CPU.
+    public static let maxSkipPerInboundMessage: UInt32 = 1000
+
     /// Outer-ratchet root key. Advances on every DH step.
     public private(set) var rootKey: RootKey
 
@@ -116,6 +127,17 @@ public struct RatchetSession: Sendable {
     /// receiving chain.
     public private(set) var previousSendingChainLength: UInt32
 
+    /// Cache of message keys we derived during a catch-up step
+    /// but did not yet consume. Keyed by (peer-DH-public-key,
+    /// messageNumber-within-that-chain). Bounded LRU eviction
+    /// keeps memory footprint at most `maxSkippedKeysCache`.
+    var skippedKeys: [SkippedKeyIdentity: MessageKey]
+
+    /// FIFO ordering of `skippedKeys` insertions for LRU
+    /// eviction. Parallel to `skippedKeys` (always
+    /// `.count == skippedKeys.count`).
+    var skippedKeysOrder: [SkippedKeyIdentity]
+
     private init(
         rootKey: RootKey,
         sendingChainKey: ChainKey?,
@@ -131,7 +153,18 @@ public struct RatchetSession: Sendable {
         self.nSend = 0
         self.nRecv = 0
         self.previousSendingChainLength = 0
+        self.skippedKeys = [:]
+        self.skippedKeysOrder = []
     }
+}
+
+/// Identity of a single cached skipped message key. The pair
+/// `(dhPublicKey, messageNumber)` is unique per chain because
+/// `dhPublicKey` is the peer's DH key that was active when the
+/// chain produced the message.
+struct SkippedKeyIdentity: Hashable, Sendable {
+    let dhPublicKey: Data
+    let messageNumber: UInt32
 }
 
 // MARK: - Initialisation
@@ -250,35 +283,45 @@ extension RatchetSession {
         _ message: RatchetMessage,
         additionalData: Data? = nil
     ) throws -> Data {
-        // If the peer rotated their DH key, run the DH
-        // ratchet step before touching the symmetric chain.
+        // 1. Was this a previously-skipped message? Resolve
+        //    from cache and we're done. Cache hit covers both
+        //    "old chain, missed message arrived late" and
+        //    "current chain, out-of-order arrival" cases —
+        //    both look the same from the receiver's POV.
+        if let plaintext = try tryConsumeSkippedKey(
+            message: message,
+            additionalData: additionalData
+        ) {
+            return plaintext
+        }
+
+        // 2. If the peer's DH rotated, fast-forward whatever
+        //    keys we missed in our current receiving chain
+        //    (saving them to cache so a late old-chain message
+        //    can still be decrypted later) and then run the
+        //    DH ratchet step.
         if receivingDH == nil || receivingDH != message.header.dhPublicKey {
+            try skipKeysInCurrentChain(until: message.header.previousChainLength)
             try performDHRatchetStep(newPeerDH: message.header.dhPublicKey)
         }
 
+        // 3. Within the current chain, fast-forward to the
+        //    incoming message's number, caching every key
+        //    we step over. The MAX_SKIP guard is enforced
+        //    inside skipKeysInCurrentChain.
+        try skipKeysInCurrentChain(until: message.header.messageNumber)
+
+        // 4. Derive *this* message's key from the chain and
+        //    decrypt.
         guard let ck = receivingChainKey else {
             throw AegisError.underlying(
                 description: "RatchetSession.decrypt: no receiving chain after DH step (state corrupted?)"
             )
         }
-
-        // Strict in-order semantics for this commit. Commit 4
-        // (out-of-order handling) replaces this branch with
-        // skipped-key derivation and the bounded cache.
-        guard message.header.messageNumber == nRecv else {
-            throw AegisError.invalidNonce(
-                reason: "RatchetSession.decrypt: out-of-order delivery (expected message \(nRecv), got \(message.header.messageNumber)) — out-of-order handling lands in Sprint 5 commit 4"
-            )
-        }
-
         let (nextCK, mk) = ck.advance()
         let derived = try mk.derive()
 
         let aad = try Self.aadBytes(header: message.header, extra: additionalData)
-
-        // Rebuild the EncryptedPayload with the AAD bound so
-        // AESGCM.decrypt's authenticate-then-decrypt step uses
-        // the same bytes the encrypt side did.
         let payload = EncryptedPayload(
             methodId: message.payload.methodId,
             nonce: message.payload.nonce,
@@ -286,12 +329,100 @@ extension RatchetSession {
             tag: message.payload.tag,
             additionalData: aad
         )
-        let aes = AESGCM()
-        let plaintext = try aes.decrypt(payload, key: derived.encryptionKey)
+        let plaintext = try AESGCM().decrypt(payload, key: derived.encryptionKey)
 
         receivingChainKey = nextCK
         nRecv += 1
         return plaintext
+    }
+
+    /// Try to decrypt `message` using a previously-cached
+    /// skipped key. Returns the plaintext on success, nil if
+    /// we have no matching cached key. AEAD authentication is
+    /// still performed — a tampered cached-decrypt fails with
+    /// AegisError.authenticationFailed just like the in-chain
+    /// path.
+    private mutating func tryConsumeSkippedKey(
+        message: RatchetMessage,
+        additionalData: Data?
+    ) throws -> Data? {
+        let id = SkippedKeyIdentity(
+            dhPublicKey: message.header.dhPublicKey,
+            messageNumber: message.header.messageNumber
+        )
+        guard let mk = consumeSkippedKey(id: id) else { return nil }
+        let derived = try mk.derive()
+        let aad = try Self.aadBytes(header: message.header, extra: additionalData)
+        let payload = EncryptedPayload(
+            methodId: message.payload.methodId,
+            nonce: message.payload.nonce,
+            ciphertext: message.payload.ciphertext,
+            tag: message.payload.tag,
+            additionalData: aad
+        )
+        return try AESGCM().decrypt(payload, key: derived.encryptionKey)
+    }
+
+    /// Advance the current receiving chain to `until` (the
+    /// soon-to-be-current `nRecv`), caching every key we step
+    /// over so that out-of-order arrivals can decrypt later.
+    /// Bounded by `maxSkipPerInboundMessage` so an attacker
+    /// claiming far-future numbers cannot pin our CPU.
+    private mutating func skipKeysInCurrentChain(until: UInt32) throws {
+        // No chain yet → nothing to advance. Happens before
+        // the first DH ratchet on Bob's side.
+        guard receivingChainKey != nil else { return }
+
+        // Refuse adversarial skip-counts.
+        if until > nRecv && (until - nRecv) > Self.maxSkipPerInboundMessage {
+            throw AegisError.invalidNonce(
+                reason: "RatchetSession: skip distance \(until - nRecv) exceeds maxSkipPerInboundMessage (\(Self.maxSkipPerInboundMessage)) — possible DoS attempt"
+            )
+        }
+
+        // The cache key needs the peer's DH public key for
+        // *this* chain. Invariant: receivingChainKey != nil
+        // implies receivingDH != nil (set by performDHRatchetStep).
+        guard let chainDH = receivingDH else { return }
+
+        while nRecv < until {
+            guard let ck = receivingChainKey else { break }
+            let (nextCK, mk) = ck.advance()
+            let id = SkippedKeyIdentity(
+                dhPublicKey: chainDH,
+                messageNumber: nRecv
+            )
+            cacheSkippedKey(id: id, mk: mk)
+            receivingChainKey = nextCK
+            nRecv += 1
+        }
+    }
+
+    private mutating func cacheSkippedKey(id: SkippedKeyIdentity, mk: MessageKey) {
+        // If we are re-caching the same id (shouldn't happen
+        // in a well-behaved session but defensive), refresh
+        // the order entry.
+        if skippedKeys[id] != nil {
+            if let idx = skippedKeysOrder.firstIndex(of: id) {
+                skippedKeysOrder.remove(at: idx)
+            }
+        }
+        skippedKeys[id] = mk
+        skippedKeysOrder.append(id)
+
+        // LRU eviction.
+        while skippedKeysOrder.count > Self.maxSkippedKeysCache {
+            let evict = skippedKeysOrder.removeFirst()
+            skippedKeys[evict] = nil
+        }
+    }
+
+    private mutating func consumeSkippedKey(id: SkippedKeyIdentity) -> MessageKey? {
+        guard let mk = skippedKeys.removeValue(forKey: id) else { return nil }
+        if let idx = skippedKeysOrder.firstIndex(of: id) {
+            skippedKeysOrder.remove(at: idx)
+        }
+        return mk
     }
 
     /// Apply a DH ratchet step in response to a peer-DH change
