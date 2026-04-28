@@ -540,16 +540,123 @@ from the IPA-distribution concern.
 
 ---
 
-## v0.0.9 — Sprint 8: Persistence and local conversations 📋
+## v0.0.9 — Sprint 8: Persistence and local conversations ✅
 
+**Tagged:** `v0.0.9-sprint-8`
 **Goal:** persist encrypted messages between two locally-defined
 users. Still no networking.
 
+Tracking issue: [#12](https://github.com/DemigodDSK/aegis/issues/12)
+
 Deliverables:
-- [ ] CoreData (or equivalent) schema for conversations and messages
-- [ ] All on-disk message bodies are AEAD-protected
-- [ ] Per-conversation algorithm selector (Tier 1 only at this stage)
-- [ ] Tag `v0.0.9-sprint-8`
+- [x] Storage schema for conversations and messages — chosen
+      tooling is **raw SQLite** via the system `sqlite3`
+      C-API (no third-party deps). Schema lives at
+      `Sources/AegisStorage/SQLite/Migrations.swift` and is
+      versioned through `PRAGMA user_version`. Append-only
+      migration list: v1 (conversations + messages), v2
+      (ratchet_sessions).
+- [x] All on-disk message bodies are AEAD-protected — see
+      "Sprint 8 settled choices" below for the at-rest
+      design.
+- [x] AegisStorage extended to persist `RatchetSession` per
+      peer (`RatchetSessionStore` — JSON-encoded session blob
+      with FK CASCADE to its conversation row).
+- [x] Per-conversation algorithm metadata (Tier 1 only at
+      this stage; Tier 2 / Aegis Lab is later) — three
+      `_method` text columns on `conversations` carry the
+      AEAD / KEM / signature method ids.
+- [x] Migration test: a session bootstrapped pre-persistence
+      still decrypts after persistence lands
+      (`SchemaMigrationIntegrationTests`).
+- [x] All new crypto-core code labelled `pre-council-approval`.
+- [x] Tag `v0.0.9-sprint-8`
+
+New surface in this sprint:
+- `AegisStorage.SQLiteDatabase` + `SQLiteStatement` — thin
+  Swift wrapper over the system sqlite3 C-API. Foreign keys
+  ON, WAL journaling, transaction helper.
+- `Migrations` — append-only schema migration runner driven
+  by PRAGMA user_version.
+- `RatchetSessionStore` — UPSERT / load / delete keyed by
+  `conversation_id`.
+- `ConversationStorageKey` — per-conversation 256-bit
+  AES-GCM key in the Keychain (afterFirstUnlockThisDeviceOnly,
+  never iCloud).
+- `ConversationStore` — conversation CRUD + the send /
+  receive flow that drives the Double Ratchet plus
+  AEAD-at-rest persistence. Returns `SendResult { stored,
+  wire }`; the wire message is what a future transport
+  (Sprint 9) will actually send.
+- `Conversation`, `StoredMessage`, `MessageDirection`,
+  `SendResult`, `ConversationStoreError` — value types for
+  the API.
+- `RatchetSession`, `RootKey`, `ChainKey`, `MessageKey`,
+  `SkippedKeyIdentity` are now `Codable`. Manual Codable on
+  the byte-wrapped types re-validates the 32-byte length on
+  decode (auto-synthesis would skip the precondition).
+- `AegisApp.TwoUserDemo` — `@Observable` `@MainActor`
+  bootstrappable Alice/Bob pair: full PQXDH handshake,
+  paired ratchet sessions, paired conversation rows, persona
+  toggle, send routes through `ConversationStore.send` then
+  `ConversationStore.receive` so both sides land in the same
+  device-local DB.
+- `AegisApp.ConversationsListView` + `ConversationThreadView`
+  — Conversations tab on the main TabView.
+- `AppState.setupDatabase()`, `bootstrapTwoUserDemo()`,
+  `sendFromActivePersona(_:)`, plus the
+  `conversations` / `twoUserDemo` accessors.
+
+Test status at tag: 292 tests, 3 skipped (pre-existing
+AES.GCM CryptoKit-trap cases — see [issue #1](https://github.com/DemigodDSK/aegis/issues/1)),
+0 failures. Sprint 8 added 68 new tests across
+AegisCryptoTests, AegisStorageTests, and AegisAppTests.
+
+### Sprint 8 settled choices
+
+The planning round (per the project pattern) surfaced three
+decisions before any code was written. The user picked all
+three recommendations.
+
+**1. Storage layer: raw SQLite via system `sqlite3`.**
+Considered: SwiftData, CoreData, GRDB, flat encrypted files.
+SwiftData has had iOS 17/18 migration sharp edges that we
+don't want this early in a security-sensitive project.
+CoreData would add NSManagedObject ergonomics for no
+expressivity gain. GRDB would require a third-party-deviation
+note we don't need at this stage. Raw SQLite is
+audit-friendly (anyone can `.dump` the DB), zero
+transitive surface, and the wrapper is small and ours.
+
+**2. On-disk encryption posture: ratchet ciphertext as-is
+(no second AEAD over the wire ciphertext) PLUS a separate
+per-conversation Keychain storage key for at-rest plaintext
+(decided mid-sprint, before commit 3).** The original
+planning-round phrasing of decision 2 was about whether to
+double-encrypt the wire ciphertext to defend against
+ratchet-state leak — answer: no, the ratchet AEAD is
+already strong. But the Double Ratchet is forward-secure,
+so storing wire ciphertext verbatim means past messages
+cannot be decrypted again for thread display. The
+conversation between commits 2 and 3 split the question:
+wire ciphertext is the ratchet AEAD output (decision 2,
+unchanged); at-rest blobs are AES-GCM-protected with a
+per-conversation Keychain-resident key (a different threat
+model than decision 2 was about, namely defending against
+the SQLite file being exfiltrated separately from the
+Keychain). AAD on each at-rest blob binds it to its
+`(conversation_id, message_id, direction)` so a row swap
+is detected on read.
+
+**3. UI scope: option B — two-user toggle ("I am Alice / I
+am Bob") on a single device.** A segmented persona picker
+on the Conversations tab routes send through whichever
+persona is active; the wire message is then delivered to
+the OTHER persona's conversation in the same DB.
+Conversations are bootstrapped through a real PQXDH
+handshake — the same Sprint 4 path a real two-device
+session will use when networking arrives in Sprint 9 — so
+the demo isn't a shortcut around the protocol.
 
 ---
 
