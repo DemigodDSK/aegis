@@ -40,9 +40,7 @@ public struct RootView: View {
         } else if state.identity == nil {
             IdentitySetupScreen(state: state)
         } else {
-            // Main app surface. Commit 5 wraps this in a
-            // TabView with Settings → Security alongside.
-            DemoScreen()
+            MainTabView(state: state)
         }
     }
 }
