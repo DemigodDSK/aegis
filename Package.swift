@@ -66,6 +66,11 @@ let package = Package(
             dependencies: ["AegisCrypto", "AegisStorage"],
             path: "Sources/AegisApp"
         ),
+        .executableTarget(
+            name: "aegis-demo",
+            dependencies: ["AegisApp"],
+            path: "Sources/aegis-demo"
+        ),
         .testTarget(
             name: "AegisCryptoTests",
             dependencies: ["AegisCrypto"],

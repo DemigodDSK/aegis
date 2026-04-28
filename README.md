@@ -68,24 +68,31 @@ In order:
 
 ## Build and run
 
-The cryptographic library (`AegisCrypto`) builds and tests with
-stock SwiftPM today. The iOS app target arrives at Sprint 6
-(v0.0.7).
+`AegisCrypto` (primitives + protocols) plus `AegisStorage`
+(Keychain wrappers) plus `AegisApp` (SwiftUI views) build and
+test with stock SwiftPM today. A tiny macOS executable target
+hosts the SwiftUI surface so you can run the app right now.
 
 ```bash
 # Library + tests — runs today.
 swift build
 swift test
-# Expected at v0.0.4-sprint-3: 73 tests passing, 3 skipped, 0 failures.
+# Expected at v0.0.7-sprint-6: 224 tests passing, 3 skipped, 0 failures.
 
-# iOS app shell — coming at Sprint 6 (v0.0.7).
-# open Aegis.xcodeproj
+# Launch the SwiftUI demo on macOS — runs today.
+swift run aegis-demo
+# Onboarding flow → identity setup → encrypt/decrypt demo +
+# Settings → Security with the live capability table.
+
+# iOS distribution (Xcode project, IPA, TestFlight) lands at
+# Sprint 7. The SwiftUI views in AegisApp are already iOS-ready;
+# Sprint 7 just adds the .xcodeproj wrapper and signing.
 ```
 
 Requires Xcode 26 / Swift 6.2+ on macOS 26 — Apple's native
-post-quantum CryptoKit primitives (`MLKEM768`, `MLDSA65`,
-`XWingMLKEM768X25519`) are gated `@available(iOS 26.0, macOS
-26.0, ...)`, so the SwiftPM platform floor follows them.
+post-quantum CryptoKit primitives (`MLKEM768`, `MLKEM1024`,
+`MLDSA65`, `XWingMLKEM768X25519`) are gated `@available(iOS 26.0,
+macOS 26.0, ...)`, so the SwiftPM platform floor follows them.
 
 ## License
 
