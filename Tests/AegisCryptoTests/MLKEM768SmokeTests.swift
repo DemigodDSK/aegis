@@ -130,4 +130,12 @@ final class MLKEM768SmokeTests: XCTestCase {
         XCTAssertEqual(priv.publicKey.rawRepresentation.count, 1184,
                        "ML-KEM-768 encapsulation key must be 1184 bytes (FIPS 203)")
     }
+
+    func testSeedRepresentation_isFixedLength() throws {
+        // ML-KEM-768 seed per FIPS 203 is 64 bytes (d || z, each 32).
+        // CryptoKit returns this format directly.
+        let priv = try MLKEM768.PrivateKey()
+        XCTAssertEqual(priv.seedRepresentation.count, 64,
+                       "ML-KEM-768 seed must be 64 bytes (FIPS 203 d||z)")
+    }
 }

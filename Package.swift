@@ -44,7 +44,13 @@ let package = Package(
         .testTarget(
             name: "AegisCryptoTests",
             dependencies: ["AegisCrypto"],
-            path: "Tests/AegisCryptoTests"
+            path: "Tests/AegisCryptoTests",
+            resources: [
+                // Shipped as test-bundle resources so KAT files are
+                // available via `Bundle.module` regardless of the
+                // working directory `swift test` is invoked from.
+                .copy("Vectors")
+            ]
         ),
     ]
 )
