@@ -43,3 +43,30 @@ Aegis test suite consumes `seed` (32 bytes) for KeyGen and
 Apple's `XWingMLKEM768X25519.PublicKey.encapsulate()` does not
 accept caller-supplied randomness — the `eseed` field in the JSON
 is unused.
+
+## ML-DSA-65 — NIST FIPS 204
+
+| File | Source | Pinned commit | SHA-256 |
+|---|---|---|---|
+| `mldsa_nist_keygen_65_tests.txt` | `google/boringssl @ crypto/mldsa/mldsa_nist_keygen_65_tests.txt` | [`48d150f5`](https://github.com/google/boringssl/blob/48d150f5940a3fd1a41cd0ce067887efa97fb2be/crypto/mldsa/mldsa_nist_keygen_65_tests.txt) | `2a88427a6e7e225626c38e4e520fed372a41fd067c680cbce9ac20bc8ae0b4e9` |
+| `mldsa_65_wycheproof_verify_test.json` | `google/boringssl @ third_party/wycheproof_testvectors/mldsa_65_verify_test.json` | [`72cb1bdc`](https://github.com/google/boringssl/blob/72cb1bdce029ce3df0710607975d4a26dd62058c/third_party/wycheproof_testvectors/mldsa_65_verify_test.json) | `45372a71c3d19eaba50d65859d66a36257ebbb7cfb156229930848f99f6b3c78` |
+
+KeyGen file is the BoringSSL mirror of NIST ACVP `ML-DSA-keyGen-FIPS204`
+vectors — 25 entries. Each is `(seed, pub, priv)`; we verify
+that the seed → pub derivation in CryptoKit matches NIST.
+
+Wycheproof verify file is Project Wycheproof's targeted-edge-case
+suite for ML-DSA-65 signature verification — 24 groups × ~7
+tests each = 160 total verifications. Each group ships a single
+`publicKey` (raw FIPS 204 format) plus a list of `(msg, sig,
+result)` triples where `result ∈ {valid, invalid, acceptable}`.
+We confirm `MLDSA65Signature.isValidSignature` returns `true` on
+`valid` cases and either returns `false` or throws on `invalid`
+cases. `acceptable` cases pass either way (Wycheproof's
+"implementation-defined" outcomes).
+
+We deliberately do NOT ship `mldsa_nist_siggen_65_tests.txt`:
+NIST's SigGen vectors give `(sk, msg, signature)` triples in
+the raw 4032-byte FIPS 204 sk format, which Apple's CryptoKit
+API does not accept as input. Wycheproof's verify suite
+provides equivalent coverage in a usable shape.
