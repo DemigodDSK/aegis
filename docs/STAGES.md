@@ -98,8 +98,9 @@ Deliverables:
 
 ---
 
-## v0.0.3 — Sprint 2: ML-KEM-768 + X25519 hybrid 🚧
+## v0.0.3 — Sprint 2: ML-KEM-768 + X25519 hybrid ✅
 
+**Tagged:** `v0.0.3-sprint-2`
 **Goal:** post-quantum key encapsulation. This is the headline
 feature — what makes Aegis genuinely *post-quantum* rather than
 just "AES-GCM in a wrapper".
@@ -109,18 +110,29 @@ Tracking issue: [#3](https://github.com/DemigodDSK/aegis/issues/3)
 Deliverables:
 - [x] Investigate Apple CryptoKit ML-KEM availability — see Conscious
       Deviation below. Apple ships native PQC on macOS 26 / iOS 26.
-- [ ] Bump `Package.swift` platform minimums to iOS 26 / macOS 26
+- [x] Bump `Package.swift` platform minimums to iOS 26 / macOS 26
       (and update CI runners to `macos-26` to match)
-- [ ] `KeyEncapsulation` protocol (parallel to `Encryption`)
-- [ ] `Sources/AegisCrypto/Tier1/HybridKEM.swift` — thin wrapper over
+- [x] `KeyEncapsulation` protocol (parallel to `Encryption`)
+- [x] `Sources/AegisCrypto/Tier1/HybridKEM.swift` — thin wrapper over
       Apple's `XWingMLKEM768X25519`, conforming to `KeyEncapsulation`
-- [ ] X-Wing KAT vectors passing (per draft-connolly-cfrg-xwing-kem)
-- [ ] Standalone `MLKEM768` smoke test against NIST FIPS 203 KATs
-      (verifies the underlying KEM, complements the X-Wing tests)
-- [ ] Tag `v0.0.3-sprint-2`
+- [x] X-Wing KAT vectors passing (3 vectors from
+      draft-connolly-cfrg-xwing-kem; KeyGen + Decap × 2 paths)
+- [x] Standalone `MLKEM768` KAT against NIST FIPS 203 KeyGen
+      (25 vectors mirrored from BoringSSL's NIST-ACVP corpus).
+      Decap KATs are shipped for completeness but not consumed:
+      Apple's API does not accept raw FIPS 203 `dk` bytes —
+      see `Tests/AegisCryptoTests/Vectors/README.md`.
+- [x] Tag `v0.0.3-sprint-2`
 
-Out of scope: the actual key-exchange protocol (X3DH-equivalent)
-and identity signatures — those are Sprint 3.
+Test status at tag: 51 tests, 3 skipped (pre-existing AES-GCM
+CryptoKit-trap cases — see [issue #1](https://github.com/DemigodDSK/aegis/issues/1)),
+0 failures.
+
+Out of scope (deferred to later sprints):
+- Key-exchange protocol (X3DH-equivalent) — Sprint 3.
+- Identity signatures (ML-DSA-65) — Sprint 3.
+- The concat+HKDF combiner as an Aegis Lab Tier 2 experiment —
+  Year 2.
 
 ### Conscious deviation — X-Wing instead of concat+HKDF
 
