@@ -34,10 +34,14 @@ import Foundation
 /// signing keypair and the Diffie-Hellman keypair.
 ///
 /// `IdentityKeyPair` is sensitive material — both component
-/// `privateKey` byte strings are secrets. Once Sprint 6 ships
-/// AegisStorage, the canonical home for these will be the
-/// Keychain / Secure Enclave, not in-memory Swift values.
-public struct IdentityKeyPair: Sendable {
+/// `privateKey` byte strings are secrets. The canonical home
+/// for these is the Keychain / Secure Enclave (see
+/// `AegisStorage`); in-memory Swift values are short-lived
+/// during a session.
+///
+/// `Codable` for serialisation into Keychain blobs; treat the
+/// encoded form as just as sensitive as the in-memory one.
+public struct IdentityKeyPair: Sendable, Codable {
 
     /// ML-DSA-65 signing keypair. Used for signing prekey
     /// bundles, attestations, and any artefact whose authorship

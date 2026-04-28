@@ -107,7 +107,7 @@ public enum X25519 {
 /// transmission. Currently only X25519 produces these; if a
 /// second DH algorithm ever lands, this envelope becomes
 /// algorithm-tagged.
-public struct DHKeyPair: Sendable, Equatable {
+public struct DHKeyPair: Sendable, Equatable, Codable {
 
     /// 32-byte X25519 public key. Treat as opaque. Send to
     /// peers who want to compute a shared secret with you.

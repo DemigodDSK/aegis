@@ -9,10 +9,17 @@
 // platform minimums are pinned to match. This decision is documented
 // as a conscious deviation in docs/STAGES.md v0.0.3.
 //
-// Subsequent sprints will add:
-//   - AegisProtocol  (key exchange + message wire format)
-//   - AegisStorage   (Keychain + Secure Enclave wrappers)
-//   - AegisApp       (the iOS application target)
+// Layering as of Sprint 6 (v0.0.7):
+//   AegisCrypto    — pure crypto primitives + protocols
+//                    (AEAD, KEM, signatures, identity, PQXDH,
+//                    Double Ratchet)
+//   AegisStorage   — Keychain + (future) Secure Enclave wrappers,
+//                    depends on AegisCrypto for the Codable types
+//                    it persists
+//   AegisApp       — SwiftUI views, depends on AegisStorage
+//   aegis-demo     — macOS executable that hosts AegisApp so the
+//                    app is visible today; iOS Xcode-project
+//                    distribution is Sprint 7 territory
 
 import PackageDescription
 
@@ -26,6 +33,10 @@ let package = Package(
         .library(
             name: "AegisCrypto",
             targets: ["AegisCrypto"]
+        ),
+        .library(
+            name: "AegisStorage",
+            targets: ["AegisStorage"]
         ),
     ],
     dependencies: [
@@ -41,6 +52,11 @@ let package = Package(
             dependencies: [],
             path: "Sources/AegisCrypto"
         ),
+        .target(
+            name: "AegisStorage",
+            dependencies: ["AegisCrypto"],
+            path: "Sources/AegisStorage"
+        ),
         .testTarget(
             name: "AegisCryptoTests",
             dependencies: ["AegisCrypto"],
@@ -51,6 +67,11 @@ let package = Package(
                 // working directory `swift test` is invoked from.
                 .copy("Vectors")
             ]
+        ),
+        .testTarget(
+            name: "AegisStorageTests",
+            dependencies: ["AegisStorage"],
+            path: "Tests/AegisStorageTests"
         ),
     ]
 )

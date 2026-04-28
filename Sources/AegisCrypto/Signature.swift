@@ -86,7 +86,7 @@ public protocol Signature: Sendable {
 ///
 /// The `privateKey` bytes are sensitive material — store them
 /// in the Keychain or Secure Enclave, not on disk in the clear.
-public struct SignatureKeyPair: Sendable, Equatable {
+public struct SignatureKeyPair: Sendable, Equatable, Codable {
 
     /// Algorithm-specific public-key bytes. Treat as opaque.
     /// Publish this as part of an identity record so peers can
