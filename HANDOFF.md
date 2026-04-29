@@ -9,11 +9,15 @@ of this file as your first message AND open the session in
 `~/Documents/aegis` so the agent has direct file access. The new
 agent will have full context.
 
-**Last updated:** 2026-04-28 evening, after Sprint 7 Phase A
-landed (the iOS app runs on the iPhone-17-Pro simulator with the
-correct dark theme). The original handoff (early Apr 27,
-end-of-Sprint-1, just before Sprint 2) is preserved in git
-history at the corresponding commit if you need to read it cold.
+**Last updated:** 2026-04-28 evening, after Sprint 8 (v0.0.9 —
+Persistence + local two-user demo) shipped and was pushed +
+tagged. Sprint 9 (Networking) planning is mid-round — the user
+has answered the backend choice (Option B, self-hosted relay,
+with polling instead of push because no Apple Developer Program
+enrolment yet) and owes one final sub-decision (server runtime).
+The previous handoff (end of Sprint 7 Phase A, before Sprint 8)
+is preserved in git history at commit `fa7d1a8` if you need to
+read it cold.
 
 ---
 
@@ -21,20 +25,50 @@ history at the corresponding commit if you need to read it cold.
 
 The user is **Datta Sai Krishna N** (`@DemigodDSK`), maintainer
 of the Aegis post-quantum messenger. He's mid-conversation with
-the previous Claude Code session about Sprint 8 (Persistence).
-The previous session laid out three decisions and is waiting for
-his answer:
+the previous Claude Code session about Sprint 9 (Networking).
 
-> 1. **Storage layer:** SQLite via system `sqlite3` C-API — yes /
->    use SwiftData / use something else?
-> 2. **Encryption posture:** ratchet ciphertext as-is — yes /
->    add Keychain-backed second layer?
-> 3. **UI scope:** two-user toggle (option B per the discussion)
->    — yes / minimal / defer?
+**Status of Sprint 9 planning round:**
 
-When he answers, you start Sprint 8 commit 1 (storage layer) per
-his choice. Plan and rationale for the three decisions are below
-under "Sprint 8 — what's next".
+The previous session surfaced the backend decision (A — CloudKit,
+B — self-hosted relay, C — federated/p2p) and several
+sub-decisions. The user answered:
+
+- Backend: **A is blocked** because he does not yet have an
+  Apple Developer Program enrolment (CloudKit needs the paid
+  account). C is premature. So **Option B (self-hosted relay)**
+  with **polling instead of push notifications** is the
+  effective choice.
+- Wire format: **JSON for v0.x** (already pinned in STAGES.md).
+- Server scope: **minimal HTTP API** (~300 lines): POST
+  /prekeys, GET /prekeys/{userId}, POST /messages, GET
+  /messages/since.
+- Server repo: **separate repo** `aegis-relay` (keeps audit
+  surface separate from the client).
+- Push notifications: **deferred to a "Sprint 9b"** once Apple
+  enrolment lands — write a "Conscious deviation" note in
+  STAGES.md when you tag v0.0.10.
+
+**Still open — ask for one answer before commit 1:**
+
+> **Server runtime choice:** Swift Vapor (one language across
+> client+server, easy auditing, share Codable types via a tiny
+> shared package) vs Go (smaller binary, lower memory, easier
+> ops on tiny VPS) vs Plain Swift NIO (less framework, more
+> code).
+>
+> Mild rec: **Vapor** — keeps the project Swift-only, the DX
+> win (sharing types) is real if we keep the API surface small.
+
+When he answers, you start Sprint 9 commit 1 (wire format
+types — pure client-side Swift, no networking yet, so this
+commit is safe to ship regardless of any later backend
+question). Plan and rationale are below under "Sprint 9 —
+what's next".
+
+**Side task pending:** May 2026 warrant canary, due on or
+after **2026-05-01** (3 days from this handoff). Recipe is in
+this file's `canary/` section comment. The user has agreed to
+draft + sign on May 1; you can offer to do it then.
 
 ---
 
@@ -62,14 +96,15 @@ gpg --verify canary/2026-04.txt.asc canary/2026-04.txt
 
 # 4. Tests pass
 swift test 2>&1 | grep "Executed.*tests.*failures" | tail -1
-# expected: "Executed 224 tests, with 3 tests skipped and 0 failures"
+# expected: "Executed 292 tests, with 3 tests skipped and 0 failures"
 
 # 5. CI is green on origin/main
 gh run list --limit 3
 
 # 6. Open issues
 gh issue list
-# expected open: #1, #9, #10, #11, #12, #13, #14 (and that's it)
+# expected open: #1, #9, #10, #11, #13, #14 (and that's it)
+# (#12 closed at v0.0.9-sprint-8)
 
 # 7. iOS smoke-test artefacts present
 ls Aegis.xcodeproj && ls iOS/Sources iOS/Resources project.yml
@@ -79,9 +114,14 @@ ls Aegis.xcodeproj && ls iOS/Sources iOS/Resources project.yml
 xcrun simctl listapps 145620FA-CBF9-4617-B698-7449A19CE517 \
     | grep -A 1 demigoddsk
 # expected: shows io.github.demigoddsk.Aegis bundle path
+
+# 9. v0.0.9-sprint-8 tag exists locally and is pushed
+git tag --points-at HEAD~0 2>/dev/null   # may be empty if ahead of HEAD
+git tag | grep sprint-8
+# expected: v0.0.9-sprint-8
 ```
 
-If any of those fail, fix it before starting Sprint 8.
+If any of those fail, fix it before starting Sprint 9.
 
 ---
 
@@ -95,7 +135,7 @@ If any of those fail, fix it before starting Sprint 8.
 | **Local path** | `~/Documents/aegis` |
 | **Maintainer** | Datta Sai Krishna N (`@DemigodDSK`, `dsk7699@gmail.com`) |
 | **License** | AGPL v3 (Apache 2.0 dual-license planned for crypto core in Year 2) |
-| **Current version** | `v0.0.7-sprint-6` shipped; Sprint 7 Phase A landed on `main` (commits `02cd59e` → `2984409`); tag `v0.0.8-sprint-7` HELD until Phase B (Apple Developer Program + TestFlight) |
+| **Current version** | `v0.0.9-sprint-8` shipped + tagged + pushed (Sprint 7 Phase B / TestFlight still HELD on Apple Developer Program enrolment) |
 
 ## Why this project exists (the ONE thing you must internalise)
 
@@ -129,9 +169,10 @@ are non-negotiable:
    must honour MISSION.md, THREAT-MODEL.md, GOVERNANCE.md, and
    ALGORITHM-SUBMISSION.md. If a sprint requires a deviation,
    write a "Conscious deviation" entry in the relevant document
-   FIRST, get user approval, then change code. Three deviations
+   FIRST, get user approval, then change code. Four deviations
    exist so far (Sprint 2 X-Wing, Sprint 3 split, Sprint 6→7
-   split) — see `docs/STAGES.md` for the format.
+   split, Sprint 9 push-notif deferred). See `docs/STAGES.md`
+   for the format.
 
 2. **Cryptographic core changes are special.** During the
    bootstrap period (until a Security Council exists, target
@@ -200,6 +241,12 @@ The user has consistently rewarded:
   Each sprint has a planning round where you surface
   decisions, user picks A/B/C, you start. This pattern works;
   preserve it.
+- **Surface mid-sprint forks.** If a real architectural fork
+  appears mid-sprint that wasn't in the original planning
+  round (Sprint 8 hit the "ratchet ciphertext is forward-
+  secure so you can't decrypt past messages" tension), pause,
+  surface the trade-offs as a table, let him pick. Do NOT
+  guess.
 
 The user does NOT want:
 
@@ -225,66 +272,67 @@ The user does NOT want:
 | `v0.0.4-sprint-3` | `2650431` | ML-DSA-65 PQ signatures (`MLDSA65Signature`) + 25 NIST KeyGen + 160 Wycheproof verify-side KATs |
 | `v0.0.5-sprint-4` | `c325324` | PQXDH key exchange (`PQXDH`, `InitialMessage`) + identity types (`IdentityKeyPair`) + prekey bundles (`PrekeyBundle`) + safety numbers + bare `MLKEM1024KEM` + `X25519` namespace |
 | `v0.0.6-sprint-5` | `16caf55` | Double Ratchet — `ChainKey`, `MessageKey`, `RootKey`, `RatchetSession`, bounded skipped-keys cache for out-of-order delivery, full PQXDH→Ratchet integration test |
-| `v0.0.7-sprint-6` | `3fc0539` | iOS app shell as SwiftPM library + Keychain-backed identity persistence (`AegisStorage`) + macOS demo executable. App is visible today via `swift run aegis-demo` on macOS |
-| **`v0.0.8-sprint-7`** | — | **Phase A landed** (commits `02cd59e` → `2984409` on `main`): Xcode project via XcodeGen, iOS app target, `swift run` and iOS-Simulator-installable. **Tag held until Phase B** (TestFlight) |
+| `v0.0.7-sprint-6` | `3fc0539` | iOS app shell as SwiftPM library + Keychain-backed identity persistence (`AegisStorage`) + macOS demo executable |
+| **(no tag)** | `02cd59e` → `2984409` | **Sprint 7 Phase A** landed on `main`: Xcode project via XcodeGen, iOS app target, runs on iPhone 17 Pro simulator with correct dark theme. Tag `v0.0.8-sprint-7` HELD until Phase B (Apple Developer Program + TestFlight) |
+| **`v0.0.9-sprint-8`** | `75a5d10` | **Sprint 8 (Persistence + local two-user demo)** — SQLite via system `sqlite3` (schema v1 + v2), `RatchetSession` persistence (Codable + `RatchetSessionStore`), `ConversationStore` API, per-conversation Keychain-backed AES-256-GCM at-rest storage key, Conversations tab with list + thread view, two-user toggle (Alice ⇄ Bob with real PQXDH handshake on a single device), all green on CI + smoke-tested on iPhone 17 Pro simulator |
 
-### After Sprint 6 closeout, Sprint 7 split was carved out
+### Sprint numbering history
 
-Original Sprint 7 (Persistence) → renumbered to **Sprint 8**.
-New Sprint 7 = iOS distribution. Subsequent sprints all shifted
-by one slot. Documented as "Conscious deviation — split iOS
-distribution from Sprint 6" in `docs/STAGES.md` v0.0.8 section.
-After this split:
+The sprint numbers have been adjusted twice. Final mapping:
 
 | Sprint | Version | Topic | Status |
 |---|---|---|---|
-| 7 | v0.0.8 | iOS distribution (Xcode + IPA + TestFlight) | 🚧 Phase A landed; Phase B held |
-| 8 | v0.0.9 | Persistence + local conversations | 📋 next (this session's work) |
-| 9 | v0.0.10 | Networking | 📋 |
+| 1–6 | v0.0.2 → v0.0.7 | Foundations + crypto + ratchet + iOS shell | ✅ all shipped |
+| 7 | v0.0.8 | iOS distribution (Xcode + IPA + TestFlight) | 🚧 Phase A landed (`02cd59e` → `2984409`); Phase B HELD on Apple Developer Program enrolment |
+| 8 | v0.0.9 | Persistence + local two-user demo | ✅ shipped (`v0.0.9-sprint-8`, `75a5d10`) |
+| 9 | v0.0.10 | Networking | 📋 next (this session's work) |
 | 10 | v0.1.0 | First public alpha — external testers | 📋 |
 
-### Sprint 7 Phase A — what landed (commits since v0.0.7)
+### Sprint 8 — what landed (commits since v0.0.7)
 
 | Commit | Scope |
 |---|---|
-| `5fd9ea4` | crypto-core(storage): introduce AegisStorage Keychain wrapper |
-| `03a00dc` | feat(app): AegisApp SwiftUI target skeleton — AppState + theme + RootView |
-| `3809b38` | feat(app): mandatory 3-screen onboarding flow |
-| `7c8b22e` | feat(app): identity setup + demo encrypt/decrypt screen |
-| `2bbae3e` | feat(app): Settings → Security view + Capability struct + main TabView |
-| `3673a70` | feat(app): aegis-demo macOS executable host — the runnable artifact |
-| `3fc0539` | docs(stages): mark v0.0.6 Sprint 5 shipped (this is the v0.0.7-sprint-6 tag commit) |
-| `fab7774` | docs(stages): split iOS distribution from Sprint 6 (deviation note) |
-| `02cd59e` | feat(ios): Aegis.xcodeproj + iOS app target via XcodeGen |
-| `1145c33` | docs(ios): runbooks for Phase A (smoke-test) and Phase B (TestFlight) |
-| `90b55ae` | fix(ios): three project.yml fixes that unblock simulator install |
-| `3c3ae5a` | docs(ios): record the IXErrorDomain Code 13 troubleshooting recipe |
-| `2984409` | fix(app): force dark colour scheme + drop screen padding around TabView |
+| `4f36347` | crypto-core(storage): SQLite layer + schema v1 (conversations + messages tables) + migrations runner. Wrapper around the system `sqlite3` C-API; wraps in foreign-keys-on, WAL-on; `Migration.apply(to:)` is user_version-driven and append-only |
+| `8c765e7` | crypto-core(storage): RatchetSession persistence — Codable on `RootKey`/`ChainKey`/`MessageKey` (manual, validates 32-byte length on decode) + Codable on `RatchetSession` + `SkippedKeyIdentity` (auto-synthesized) + schema v2 migration adding `ratchet_sessions` table + `RatchetSessionStore` |
+| `d8127e3` | crypto-core(storage): `ConversationStore` API + per-conversation `ConversationStorageKey` in Keychain. AES-256-GCM at-rest encryption for plaintext (since ratchet ciphertext is forward-secure and can't be decrypted later for thread display). AAD on the at-rest blob binds (conversation_id, message_id, direction) so a row swap fails the AEAD |
+| `8c65a48` | feat(app): Conversations tab + `ConversationsListView` + `ConversationThreadView`. `AppState` extended with SQLite + stores. The tab landed but conversation creation still needed wiring (commit 5) |
+| `9a71a0e` | feat(app): two-user toggle — `TwoUserDemo` runs a full PQXDH handshake between synthetic Alice + Bob identities on one device, seeds both ratchet sessions, creates two `ConversationStore` conversations. The Conversations tab gains an "Acting as: Alice / Bob" segmented control |
+| `75a5d10` | docs(stages): STAGES.md v0.0.9 marked ✅ + closeout `SchemaMigrationIntegrationTests` (fresh-DB end-to-end check that the migration → bootstrap → send/receive → read-back path works through the real PQXDH). Tag `v0.0.9-sprint-8` |
 
 ### Test status
 
-`swift test` → **224 tests, 3 skipped (issue #1), 0 failures**.
+`swift test` → **292 tests, 3 skipped (issue #1), 0 failures**.
 
-The 3 skipped tests are `testDecrypt_wrongKey_*`,
+Breakdown of the 68 new tests added in Sprint 8:
+
+- 10 `SQLiteDatabaseTests` (open / round-trips / transactions / user-version)
+- 6 `MigrationsTests` (runner correctness + schema v1)
+- 7 `RatchetSessionCodableTests` (bytes round-trip + crypto round-trip across restore + skipped-keys cache survives + length validation)
+- 9 `RatchetSessionStoreTests` (CRUD + multi-conversation isolation + FK cascade + clock injection)
+- 7 `ConversationStorageKeyTests` (provision/load/delete + per-conversation isolation)
+- 10 `ConversationStoreTests` (create persists three pieces + list ordering + delete cascade + send/receive + AAD binding rejects swap)
+- 7 `AppStateDatabaseTests` (setupDatabase idempotent + error surfacing)
+- 10 `TwoUserDemoTests` (bootstrap + persona toggle + send round-trip + many-message DH rotations)
+- 1 `SchemaMigrationIntegrationTests` (closeout end-to-end through real PQXDH)
+- a couple of small additions inside the existing files (mixed in)
+
+The 3 skipped tests are still `testDecrypt_wrongKey_*`,
 `testDecrypt_tamperedCiphertext_*`, `testDecrypt_tamperedTag_*`
-— Apple-side CryptoKit AES.GCM SIGTRAP on macOS 26.x (issue #1).
-The auth-failure path is verified via
+— Apple-side CryptoKit AES.GCM SIGTRAP on macOS 26.x (issue
+#1). The auth-failure path is verified via
 `testDecrypt_tamperedAAD_throwsAuthenticationFailed` which
 passes.
 
 ### KAT coverage across the suite
 
-236 distinct known-answer-test verifications:
-- 5 hand-transcribed NIST CAVP AES-GCM vectors (Sprint 1)
-- 65 BoringSSL-mirrored AES-GCM vectors (Sprint 4 polish)
-- 25 NIST FIPS 203 ML-KEM-768 KeyGen vectors (Sprint 2)
-- 3 IETF X-Wing draft vectors × 3 pass-types each = 9 (Sprint 2)
-- 25 NIST FIPS 203 ML-KEM-1024 KeyGen vectors (Sprint 4)
-- 25 NIST FIPS 204 ML-DSA-65 KeyGen vectors (Sprint 3)
-- 160 Wycheproof ML-DSA-65 verify-side cases (Sprint 3)
-- Pinned PQXDH HKDF combiner snapshot (Sprint 4 polish)
-- Pinned ChainKey advancement + RootKey ratchet snapshots
-  (Sprint 5)
+Unchanged from Sprint 7 Phase A (Sprint 8 added storage code, no
+new cryptographic primitives so no new KAT vectors):
+
+236 distinct known-answer-test verifications across the existing
+files (NIST CAVP AES-GCM, BoringSSL-mirrored AES-GCM, NIST FIPS
+203 ML-KEM-768/1024 KeyGen, IETF X-Wing draft, NIST FIPS 204
+ML-DSA-65 KeyGen, Wycheproof ML-DSA-65 verify, pinned PQXDH
+HKDF combiner, pinned ChainKey + RootKey snapshots).
 
 All KAT vector files live in `Tests/AegisCryptoTests/Vectors/`
 with provenance + SHA-256 in that directory's `README.md`. CI
@@ -312,7 +360,9 @@ Sources/
     PQXDH.swift                        # Post-quantum extended Diffie-Hellman handshake
     SafetyNumber.swift                 # Signal-format-compatible 12×5-digit fingerprint
     Ratchet.swift                      # Symmetric ratchet (ChainKey + MessageKey) + RootKey
+                                       # — ALL Codable (added Sprint 8)
     RatchetSession.swift               # Bidirectional Double Ratchet state + encrypt/decrypt
+                                       # — Codable as a single object (added Sprint 8)
     Tier1/
       AESGCM.swift                     # AES-256-GCM (only Tier 1 AEAD)
       HybridKEM.swift                  # X-Wing PQ-hybrid KEM (CryptoKit XWingMLKEM768X25519)
@@ -320,14 +370,22 @@ Sources/
       MLDSA65.swift                    # ML-DSA-65 signatures (CryptoKit MLDSA65)
       X25519.swift                     # X25519 namespace + DHKeyPair envelope
 
-  AegisStorage/                        # Keychain-backed persistence layer
-    AegisStorage.swift                 # saveIdentity / loadIdentity / deleteIdentity / purgeAll
+  AegisStorage/                        # Persistence layer
+    AegisStorage.swift                 # Keychain-backed identity persistence (Sprint 6)
     Keychain.swift                     # Internal SecItem* wrapper
     KeychainAccessibility.swift        # Type-safe enum for kSecAttrAccessible* attrs
+    SQLite/                            # Sprint 8 — system sqlite3 wrapper + migrations
+      SQLiteDatabase.swift             # Open / execute / prepare / transaction
+      Migrations.swift                 # User-version-driven runner; schema v1 (conversations +
+                                       # messages) and v2 (ratchet_sessions)
+    RatchetSessionStore.swift          # Sprint 8 — save/load/delete RatchetSession by conversation
+    ConversationStorageKey.swift       # Sprint 8 — per-conversation 256-bit AES-GCM key in Keychain
+    ConversationStore.swift            # Sprint 8 — Conversation + StoredMessage CRUD + send / receive
 
   AegisApp/                            # SwiftUI surface (consumed by both macOS demo and iOS app)
     Theme.swift                        # AegisTheme — palette, typography, layout
     AppState.swift                     # @Observable @MainActor view-model state
+                                       # — extended Sprint 8 with SQLite + ConversationStore + TwoUserDemo
     RootView.swift                     # Top-level routing (onboarding → identity → main)
     OnboardingFlow.swift               # 3-screen mandatory honesty flow
     IdentitySetupScreen.swift          # Display-name input + key generation
@@ -335,7 +393,11 @@ Sources/
     DemoScreen.swift                   # Encrypt/decrypt UI
     SettingsScreen.swift               # About card + Security capability list
     Capability.swift                   # 14-row capability list mirroring THREAT-MODEL.md
-    MainTabView.swift                  # Demo + Settings tab view
+    MainTabView.swift                  # Demo + Conversations + Settings tab view
+                                       # — Conversations tab added Sprint 8
+    ConversationsListView.swift        # Sprint 8 — persona toggle + active-conversation row
+    ConversationThreadView.swift       # Sprint 8 — message bubbles + composer
+    TwoUserDemo.swift                  # Sprint 8 — Alice + Bob bootstrap + send routing
 
   aegis-demo/                          # macOS executable host
     AegisDemoApp.swift                 # @main App for macOS — `swift run aegis-demo`
@@ -349,12 +411,13 @@ iOS/                                   # iOS-target-specific files (consumed by 
   Aegis.entitlements                   # Generated; Keychain access group + APNs (provisioned)
 
 Tests/
-  AegisCryptoTests/                    # 200+ tests covering all the above
+  AegisCryptoTests/                    # ~200+ tests
     AESGCM*.swift                      # AES-GCM contract + KAT tests
     HybridKEM*.swift                   # X-Wing wrapper tests
     MLKEM768/1024 SmokeTests.swift     # Apple-API tripwires for KEMs
     MLDSA65*.swift                     # Signature wrapper + KAT tests
     Ratchet*.swift                     # Double Ratchet primitive + session tests
+    RatchetSessionCodableTests.swift   # Sprint 8 — Codable round-trip + crypto round-trip across restore
     PQXDH*.swift                       # Handshake tests + pinned HKDF KAT
     PrekeyBundle*.swift                # Bundle generation + signature-chain verify tests
     SafetyNumber*.swift                # Order-independence + format pinning
@@ -364,13 +427,28 @@ Tests/
     Vectors/
       README.md                        # Provenance + SHA-256 for every KAT file
       *.json, *.txt                    # KAT data (committed verbatim from upstream sources)
-  AegisStorageTests/                   # Keychain CRUD tests
-  AegisAppTests/                       # AppState + DemoViewModel + Capability list tests
+  AegisStorageTests/                   # Keychain CRUD + Sprint 8 storage tests
+    AegisStorageTests.swift            # Identity round-trip
+    SQLiteDatabaseTests.swift          # Sprint 8 — wrapper round-trips
+    MigrationsTests.swift              # Sprint 8 — migration runner correctness + schema v1
+    RatchetSessionStoreTests.swift     # Sprint 8 — CRUD + FK cascade
+    ConversationStorageKeyTests.swift  # Sprint 8 — provision / load / delete
+    ConversationStoreTests.swift       # Sprint 8 — full CRUD + send/receive + AAD binding
+    SchemaMigrationIntegrationTests.swift  # Sprint 8 closeout — end-to-end fresh DB through real PQXDH
+  AegisAppTests/                       # AppState + DemoViewModel + Capability + Sprint 8 demo state
+    AppStateTests.swift                # Routing + Keychain handoff
+    AppStateDatabaseTests.swift        # Sprint 8 — setupDatabase + refreshConversations
+    CapabilityTests.swift              # Drift catcher
+    DemoViewModelTests.swift           # Demo encrypt/decrypt
+    TwoUserDemoTests.swift             # Sprint 8 — bootstrap + persona toggle + send round-trip
 
 docs/
   STAGES.md                            # Per-sprint roadmap — SOURCE OF TRUTH for what's
-                                       # shipped and what's planned. Includes all three
-                                       # "Conscious deviation" subsections.
+                                       # shipped and what's planned. Includes all four
+                                       # "Conscious deviation" subsections (Sprint 2 X-Wing,
+                                       # Sprint 3 split, Sprint 6→7 split, Sprint 9
+                                       # push-notif deferred — write the last one when
+                                       # tagging v0.0.10).
   IOS-RUNBOOK.md                       # Phase A: how to run on simulator / iPhone via free Apple ID
   IOS-DISTRIBUTION-RUNBOOK.md          # Phase B: Apple Developer Program → TestFlight
 
@@ -378,8 +456,10 @@ canary/
   2026-04.txt + .asc                   # April canary, PGP-signed by maintainer key
   # 2026-05.txt is drafted in chat history — to be created on or after May 1.
   # Recipe: copy 2026-04.txt structure, change "Reporting period: May 2026" and
-  # "Date of publication: 2026-05-XX", item #4 should mention commit d71dd3d as
-  # the only THREAT-MODEL.md edit since April. Sign with the maintainer PGP key.
+  # "Date of publication: 2026-05-XX". Item #4 should mention all THREAT-MODEL.md
+  # edits since the April canary (none in Sprint 8 — Sprint 8 was all storage and UI;
+  # if Sprint 9 lands a THREAT-MODEL update before May 1, mention that commit). Sign
+  # with the maintainer PGP key.
 
 .github/workflows/ci.yml               # Build + tests on macos-26 runner; verifies Vectors/
                                        # SHA-256s against README; Node.js 24 forced via env
@@ -400,71 +480,86 @@ audit-history.md
 | #1 | bug, upstream | macOS 26.x CryptoKit AES.GCM SIGTRAP. 3 tests skipped. Workaround: AAD-tamper test covers the auth-failure path. Closes when Apple fixes. |
 | #9 | bug, upstream | macOS 26.x CryptoKit MLKEM1024 SIGTRAP on too-short seed. Workaround: size pre-validation in `MLKEM1024.swift`. Closes when Apple fixes. |
 | #10 | enhancement | Optional libsignal byte-level interop test for PQXDH. Pinned-input PQXDH KAT shipped at `1ae88af` covers drift detection; libsignal interop stays as polish-window work. |
-| #11 | epic, sprint-7 | Sprint 7 tracker (iOS distribution). Phase A landed; Phase B (TestFlight) waits for Apple Developer Program enrolment. |
-| #12 | epic, sprint-8 | **Sprint 8 tracker (Persistence + local conversations) — the active sprint.** |
-| #13 | epic, sprint-9 | Sprint 9 tracker (Networking). |
+| #11 | epic, sprint-7 | Sprint 7 tracker (iOS distribution). Phase A landed; Phase B (TestFlight) waits for Apple Developer Program enrolment — confirmed open on 2026-04-28. |
+| #13 | epic, sprint-9 | **Sprint 9 tracker (Networking) — the active sprint.** |
 | #14 | epic, sprint-10 | Sprint 10 tracker (First public alpha, v0.1.0). |
 
 Closed for context: #2 (AES-GCM KAT expansion), #3 (Sprint 2),
 #4 (Sprint 4), #5 (Sprint 5), #6 (Sprint 6), #7 (CI checksums),
-#8 (Node.js 24 actions).
+#8 (Node.js 24 actions), **#12 (Sprint 8 — closed at
+`v0.0.9-sprint-8` on 2026-04-28)**.
 
 ---
 
-## Sprint 8 — what's next (the active sprint)
+## Sprint 9 — what's next (the active sprint)
 
-The user just chose Sprint 8. Three architectural decisions were
-surfaced; he has not yet answered.
+The user just chose Sprint 9. The planning round is partially
+resolved: backend, wire format, server scope, server repo, push
+posture all decided. Server runtime is the one remaining
+sub-decision before commit 1.
 
-### Decision 1 — Storage layer
+### Backend choice — settled
+
+**Option B (self-hosted minimal HTTP relay) with polling
+instead of push.** Reasoning:
+
+- Option A (CloudKit) is gated on Apple Developer Program
+  enrolment, which the user does NOT have yet (confirmed
+  2026-04-28).
+- Option C (federated/p2p) is premature for v0.0.10.
+- Self-hosted is mission-aligned with GOVERNANCE.md ("we run
+  the box, we never see plaintext").
+- Push notifications need APNs which also gates on the Apple
+  Developer Program. So **polling** is the v0.0.10 delivery
+  mechanism; APNs becomes a "Sprint 9b" once the user enrols.
+
+### Sub-decisions — settled
+
+| # | Decision | Choice |
+|---|---|---|
+| 1 | Wire format | **JSON for v0.x** (already pinned in STAGES.md); binary at v1.0 |
+| 2 | Push notifications | **Deferred to Sprint 9b** — start with polling, add APNs once core flow works |
+| 3 | Server scope | **Minimal HTTP API** — POST /prekeys, GET /prekeys/{userId}, POST /messages, GET /messages/since. No Matrix, no federation. ~300 lines |
+| 4 | Server repo | **Separate repo** `aegis-relay` — keeps audit surface separate from the client |
+
+### Sub-decision — STILL OPEN
+
+**Server runtime (the user owes this answer):**
 
 | Option | Pros | Cons |
 |---|---|---|
-| **SwiftData** | Apple-native, modern Codable-friendly API, no third-party deps, integrates with SwiftUI `@Query` | Has had migration sharp edges in iOS 17/18; pre-1.0 for a security-sensitive project |
-| **CoreData** | Mature, well-understood migration path, Apple-native | Verbose API, NSManagedObject subclassing, harder to audit |
-| **Raw SQLite** (system framework) | Fully transparent — anyone can inspect with `sqlite3` CLI; no third-party | We write more code (schema, migrations, query layer) |
-| **GRDB** (third-party) | Best Swift SQLite wrapper | Third-party dep; needs a mission-document deviation note |
-| **Flat encrypted files** | Simplest | Scales poorly past ~1000 messages |
+| **Swift Vapor** | One language across client+server; same `Codable` types via a tiny shared package; easier auditing for the maintainer | Larger binary, Swift on Linux is fine but not lightweight |
+| **Go** | Smaller binary, lower memory, easier ops on tiny VPS, faster cold starts | Second language to maintain; can't share types |
+| **Plain Swift NIO** | Less framework | More code to write and audit |
 
-Mild recommendation: **raw SQLite via the built-in `sqlite3`
-C-API**. Audit-friendly, no third-party deps, ~200 extra lines
-of schema/query helpers, ".dump" inspectable.
+Mild rec: **Vapor** — keeps the project Swift-only. The DX win
+(sharing types) is real if we keep the API surface small.
 
-### Decision 2 — On-disk encryption posture
+### Once the user answers, the proposed Sprint 9 commit plan
 
-| Option | What it does |
-|---|---|
-| Store ratchet ciphertext as-is | DB rows contain the existing AEAD-protected bytes from the Double Ratchet |
-| Add a Keychain-backed second layer | Belt-and-suspenders; defends against a hypothetical ratchet-state leak |
-
-Mild recommendation: **as-is** — the ratchet is already strong
-AEAD; double-encrypting adds key-management complexity for
-marginal benefit. Option 2 is a later-sprint hardening.
-
-### Decision 3 — UI scope for "two locally-defined users"
-
-| Option | Effort | Outcome |
+| # | Commit | Notes |
 |---|---|---|
-| A — Minimal: list + thread, single user | ~4 commits | Persistence demonstrated, no two-party feel |
-| B — Two-user toggle: "You are Alice / now you are Bob" | ~6 commits | Genuine two-party demo on one device |
-| C — Defer the UI to Sprint 9 | ~3 commits | Tighter Sprint 8; needs a deviation note since spec says "two locally-defined users" |
+| 1 | Wire format types (`WireMessage`, `PublishedPrekeyBundle`, `MessageEnvelope`) + Codable + KAT-style round-trip tests | Client-only, no I/O. Safe to ship regardless of any later backend question |
+| 2 | `Transport` protocol + retry/backoff + `InMemoryTransport` for tests | Pure Swift, no networking yet |
+| 3 | `HTTPTransport` — URLSession-based client speaking JSON to the relay's API | Client side |
+| 4 | `aegis-relay` — separate repo, minimal HTTP server in the chosen runtime | The other half. New repo `DemigodDSK/aegis-relay`, set up via `gh repo create` |
+| 5 | Polling loop + `ConversationStore.deliver` integration + UI plumbing | Replaces what would have been push |
+| 6 | Closeout + tag `v0.0.10-sprint-9` + "Conscious deviation: deferred push to Sprint 9b" entry in STAGES.md | Documents the trim |
 
-Mild recommendation: **B** — matches the spec, and the toggle
-is also useful for testing throughout development.
+### Definition of done (from issue #13)
 
-### Once the user answers, the proposed Sprint 8 commit plan
-
-1. Storage schema + chosen storage layer + migrations
-2. `RatchetSession` persistence (extend AegisStorage)
-3. `ConversationStore` API (create / list / load /
-   append-message)
-4. UI: conversation list + thread view
-5. Two-user toggle wiring (if option B)
-6. Migration test + closeout commit + tag `v0.0.9-sprint-8`
+- [ ] Wire-format spec (JSON for v0.x — pinned now in spec form)
+- [ ] Transport layer with retries and backoff
+- [ ] Server-side: stores ciphertext only, never sees plaintext
+- [ ] Acknowledged delivery (polling-style ACKs)
+- [ ] Push-notification consumer wired up — **DEFERRED** to
+      Sprint 9b (write the deviation note when tagging)
+- [ ] All new crypto-core code labelled `pre-council-approval`
+- [ ] Tag `v0.0.10-sprint-9`
 
 ---
 
-## Sprint 7 status (what's "in flight")
+## Sprint 7 status (still in flight, BLOCKED on user)
 
 ### Phase A (landed on `main`, NOT yet tagged)
 - Aegis.xcodeproj generated by XcodeGen from project.yml
@@ -473,12 +568,15 @@ is also useful for testing throughout development.
   `xcrun simctl install` + `xcrun simctl launch`)
 - Dark theme renders correctly (after the `2984409` fix)
 - Onboarding → identity setup → demo encrypt/decrypt → settings
-  all work end-to-end on the simulator
+  → **Conversations tab with two-user toggle (Sprint 8)** all
+  work end-to-end on the simulator
 - `docs/IOS-RUNBOOK.md` (Phase A: simulator + free-Apple-ID
   iPhone instructions)
 
 ### Phase B (waits on Datta's action)
-- Apple Developer Program enrolment ($99/yr)
+- Apple Developer Program enrolment ($99/yr) — **STILL NOT
+  DONE as of 2026-04-28**, which is also why Sprint 9 chose
+  the self-hosted relay path with polling
 - App Store Connect record creation
 - Real signing certificate + provisioning profile
 - First TestFlight build pushed to internal testers (just
@@ -491,7 +589,7 @@ once enrolment is approved.
 
 ---
 
-## Three iOS-26-specific lessons from this session
+## Three iOS-26-specific lessons (carried from Sprint 7)
 
 If you set up a new SwiftPM-package-driven iOS app target via
 XcodeGen on macOS 26.x / Xcode 26.4.x and hit
@@ -512,6 +610,65 @@ XcodeGen on macOS 26.x / Xcode 26.4.x and hit
 All three are baked into `project.yml` as of commit `90b55ae`.
 The runbook `docs/IOS-RUNBOOK.md` has a troubleshooting row
 pointing to that commit.
+
+---
+
+## Sprint 8 lessons (new in this session)
+
+### The forward-secrecy / display tension is a real fork
+
+The Double Ratchet's per-message AEAD key is consumed and
+discarded after one use. So if `messages.ciphertext` stores
+the wire-format ratchet bytes verbatim, **past messages can
+never be decrypted again for thread display**. Sprint 8's
+issue body said "ciphertext only on disk" and that goal is
+incompatible with rendering past messages without something
+extra.
+
+Options surfaced mid-sprint:
+
+- **A** — store plaintext, rely on iOS Data Protection
+- **B** — store plaintext encrypted by a per-conversation
+  Keychain-backed AES-GCM key (a separate at-rest seal,
+  distinct from the wire-side ratchet)
+- **C** — store ratchet ciphertext + cache the per-message
+  AEAD key alongside it
+
+Decision: **B** (chosen by user mid-sprint). Implementation:
+`Sources/AegisStorage/ConversationStorageKey.swift`. The
+`ConversationStore.send` / `receive` flow does:
+
+1. Run ratchet encrypt / decrypt to advance the wire-side state
+2. Separately, AEAD-encrypt the plaintext under the
+   conversation's storage key with AAD bound to
+   `(conversation_id, message_id, direction)`
+3. Persist the at-rest blob to `messages.ciphertext`
+
+This satisfies "ciphertext only on disk" while preserving the
+ability to render old messages. Decision 2 of the original
+planning round was about NOT layering a second AEAD over the
+**wire ciphertext** to defend against ratchet-state leak —
+which is a different threat model from at-rest secrecy.
+
+### Codable on `RatchetSession` and supporting types
+
+Manual `init(from decoder:)` on `RootKey` / `ChainKey` /
+`MessageKey` because auto-synthesized Codable would skip the
+32-byte length precondition on `init(bytes:)` and let a
+malformed blob produce a wrong-sized key (which would crash
+at the next ratchet step). Pattern: `singleValueContainer` ->
+`Data` -> length check -> throw `DecodingError.dataCorrupted`
+on mismatch.
+
+`SkippedKeyIdentity` (internal) and `RatchetSession` (public)
+use auto-synthesized Codable.
+
+### iOS Application Support directory creation
+
+`FileManager.default.url(for: .applicationSupportDirectory, in:
+.userDomainMask, appropriateFor: nil, create: true)` does NOT
+auto-create on first iOS launch in some scenarios. The `create:
+true` parameter handles this; do not skip it.
 
 ---
 
@@ -540,6 +697,13 @@ cryptographic core?":
 - `Sources/AegisCrypto/Registry/**` (doesn't exist yet)
 - The four governance MDs (THREAT-MODEL, ALGORITHM-SUBMISSION,
   GOVERNANCE, MISSION)
+
+Sprint 8 also used `crypto-core(storage):` for AegisStorage
+extensions that persist secret material (ratchet sessions,
+storage keys). That's literally outside GOVERNANCE.md's
+crypto-core path definition, but the **persistence-of-secret-
+material discipline** still applies — keep doing this for
+Sprint 9 commits that touch on-disk crypto material.
 
 The `Maintainer:` trailer is the project convention. **Do NOT
 add `Co-Authored-By: Claude` trailers** — Datta has not asked
@@ -576,9 +740,12 @@ Each sprint follows:
 3. **Closeout commit** that marks the STAGES.md sprint entry
    ✅ and rolls up the test-status snapshot.
 4. **Annotated tag** on the closeout commit.
-5. **Push commits + tag together.**
-6. **Watch CI** until both runs are green.
-7. **Close the tracking issue** with a citation to the tag.
+5. **Push commits + tag together** (one `git push origin main
+   <tag>` after CI-clean local `swift test`).
+6. **Watch CI** until both runs are green (one for `main`, one
+   for the tag).
+7. **Close the tracking issue** with a citation to the tag and
+   the DoD checklist all ticked.
 
 ### Always use the `gh` CLI for GitHub operations
 
@@ -591,6 +758,15 @@ the operation.
 Prefer "we encrypt your messages" over "we apply AEAD
 primitives to your message bodies." Technical detail belongs
 in code comments, not user-facing docs.
+
+### Manual UI smoke testing
+
+The user has manually smoke-tested every UI commit on the
+iPhone 17 Pro simulator. After each UI-touching commit,
+present a numbered "try this" list so he can replicate the
+golden path. Do not claim the UI works without his
+confirmation — the test suite verifies code correctness, not
+feature correctness.
 
 ---
 
@@ -628,15 +804,25 @@ in code comments, not user-facing docs.
   iPhone 17 Pro simulator we tested against)
 - Standard Swift 6.3.1 toolchain
 
+### Apple Developer Program
+
+**NOT enrolled** as of 2026-04-28. This blocks:
+- Sprint 7 Phase B (TestFlight)
+- Sprint 9 Option A (CloudKit)
+- APNs push notifications (Sprint 9 push wiring → Sprint 9b)
+
+Cost when enrolled: $99/yr.
+
 ### Disk hygiene note
 
 The user's Mac was at 99% capacity (218 MB free) at one point
-during this session — common contributors to "System Data" on
-macOS dev machines: Xcode DerivedData, CoreSimulator runtimes
-(2.6 GB after iOS 26.4 download), Application Support caches
-(VS Code 1.4 GB, Google Chrome 1 GB), Homebrew cache (726 MB).
-By the end of session disk was at 75% (3.8 GB free) — looks
-like macOS reclaimed purgeable space when needed.
+during a previous session — common contributors to "System
+Data" on macOS dev machines: Xcode DerivedData, CoreSimulator
+runtimes (2.6 GB after iOS 26.4 download), Application Support
+caches (VS Code 1.4 GB, Google Chrome 1 GB), Homebrew cache
+(726 MB). Was at 75% (3.8 GB free) by end of Sprint 7 — looks
+like macOS reclaimed purgeable space when needed. Worth
+checking again if you're about to do a big build.
 
 ---
 
@@ -658,7 +844,7 @@ like macOS reclaimed purgeable space when needed.
   from STAGES.md / a prior plan. Lives as a `### Conscious
   deviation` subsection in the relevant STAGES.md entry, with
   rationale, trade-offs, what we're giving up, and the
-  `pre-council-approval` stamp. Three exist so far.
+  `pre-council-approval` stamp. Four exist so far.
 - **PQXDH** — Signal's post-quantum extended triple
   Diffie-Hellman protocol. Aegis ships its own implementation
   in `Sources/AegisCrypto/PQXDH.swift`.
@@ -668,61 +854,80 @@ like macOS reclaimed purgeable space when needed.
   via Apple's CryptoKit.
 - **CAVP / ACVP** — NIST validation programs that publish KAT
   vectors.
+- **At-rest storage key** (Sprint 8) — a per-conversation
+  256-bit AES-GCM key kept in the iOS Keychain, used to seal
+  message plaintext for storage. Distinct from wire-side
+  ratchet keys (which are forward-secure and discarded).
+  `Sources/AegisStorage/ConversationStorageKey.swift`.
+- **TwoUserDemo** (Sprint 8) — synthetic Alice + Bob bootstrap
+  on a single device. Runs a real PQXDH handshake, seeds two
+  ratchet sessions, creates two `ConversationStore` rows, and
+  routes send/receive between them when the user toggles
+  persona.
+  `Sources/AegisApp/TwoUserDemo.swift`.
 
 ---
 
 ## What this session covered (chronological)
 
-1. **Verification-and-pickup of prior session's state**:
-   confirmed Sprint 1 + canary work was clean. ML-KEM
-   investigation revealed Apple ships PQ CryptoKit natively
-   (`MLKEM768`, `MLKEM1024`, `XWingMLKEM768X25519`, `MLDSA65`,
-   `MLDSA87`, `SecureEnclave.MLKEM768/1024`, `SecureEnclave
-   .MLDSA65/87`).
-2. **Sprint 2 (v0.0.3-sprint-2):** X-Wing PQ-KEM via Apple's
-   `XWingMLKEM768X25519` + KATs. Conscious deviation #1 (X-Wing
-   instead of concat+HKDF combiner).
-3. **Sprint 3 split (Conscious deviation #2)**: split ML-DSA-65
-   from PQXDH + Keychain. Shipped Sprint 3 = ML-DSA-65 only.
-4. **Sprint 4 (v0.0.5-sprint-4):** PQXDH key exchange + identity
-   types + prekey bundles + safety numbers + bare ML-KEM-1024 +
-   X25519. Six-commit stack.
-5. **Sprint 5 (v0.0.6-sprint-5):** Double Ratchet end-to-end.
-   Five-commit stack ending with the PQXDH→Ratchet integration
-   test.
-6. **Polish backlog cleared:** issues #2, #7, #8 closed; pinned
-   PQXDH KAT shipped (#10 partial).
-7. **Sprint 6 (v0.0.7-sprint-6):** SwiftUI surface + Keychain
-   identity persistence + macOS demo. The first sprint where
-   Aegis became *visible* — `swift run aegis-demo` opens a
-   real working app on macOS.
-8. **README + THREAT-MODEL.md polish:** brought claims tables
-   in sync with shipped state; added scope-note paragraph
-   above the capability table.
-9. **Sprint 6→7 split (Conscious deviation #3):** carved iOS
-   distribution out of Sprint 6 into a new Sprint 7. Shifted
-   v0.0.9 → v0.0.10, v0.1.0 → Sprint 10. Filed tracking issues
-   #11–#14.
-10. **Sprint 7 Phase A landed:** Xcode project via XcodeGen,
-    iOS app target, runbooks for Phase A and Phase B. Hit and
-    fixed three iOS-26-specific install issues (asset catalog
-    folder reference, LSRequiresIPhoneOS, ENABLE_DEBUG_DYLIB).
-    Verified end-to-end on iPhone 17 Pro simulator. Force-dark
-    colour scheme + remove TabView screen padding fix landed
-    (`2984409`). User confirmed the app works visually with a
-    screenshot showing successful AES-256-GCM round-trip.
-11. **May canary recipe drafted** but NOT yet executed (waits
-    for May 1+). Recipe content is in this file's `canary/`
-    section comment.
-12. **Sprint 8 planning round opened:** three decisions
-    surfaced; user has not yet answered. End of session.
-
-The user briefly asked about Xcode's Coding Intelligence
-panel (whether to install the Xcode-bundled Claude Agent or
-enable MCP for external agents). The previous session
-recommended leaving both off — the existing `xcodebuild` /
-`xcrun` / file-edit / git workflow has been productive
-without it. The user hasn't pushed back.
+1. **Pickup of prior session's state**: ran the verification
+   checklist, all green. Test count was 224 / 3 skipped / 0
+   failures at start.
+2. **Sprint 8 planning round**: surfaced the three settled
+   choices (storage layer = raw SQLite via system sqlite3,
+   on-disk encryption = ratchet ciphertext as-is per the wire-
+   side framing, UI scope = two-user toggle option B). User
+   said yes to all three.
+3. **Sprint 8 commit 1** (`4f36347`): SQLite wrapper +
+   migrations runner + schema v1 (conversations + messages).
+   16 new tests; count → 240.
+4. **Sprint 8 commit 2** (`8c765e7`): Codable on the ratchet
+   types + schema v2 + `RatchetSessionStore`. 16 new tests;
+   count → 256.
+5. **Mid-sprint design fork surfaced**: forward-secrecy /
+   display tension — ratchet ciphertext can't be re-decrypted
+   for thread display. Surfaced options A (store plaintext +
+   rely on iOS Data Protection), B (per-conversation Keychain
+   storage key), C (cache per-message keys). User picked B.
+6. **Sprint 8 commit 3** (`d8127e3`): `ConversationStorageKey`
+   + `ConversationStore` with at-rest AEAD + AAD-bound to
+   (conversation, message, direction). 17 new tests; count →
+   273.
+7. **Sprint 8 commit 4** (`8c65a48`): Conversations tab +
+   `ConversationsListView` + `ConversationThreadView`.
+   `AppState` extended with the SQLite stack. 7 new tests;
+   count → 280. iOS build verified, app smoke-launched on
+   simulator (3 tabs visible).
+8. **Sprint 8 commit 5** (`9a71a0e`): `TwoUserDemo` —
+   synthetic Alice + Bob with real PQXDH handshake on one
+   device. Persona segmented control wired. 10 new tests;
+   count → 290.
+9. **Sprint 8 commit 6 / closeout** (`75a5d10`): integration
+   test (`SchemaMigrationIntegrationTests`) covering fresh-DB
+   migration → bootstrap → send/receive → read-back through
+   real PQXDH. STAGES.md v0.0.9 marked ✅. Tag
+   `v0.0.9-sprint-8`. Final count: 292 tests / 3 skipped / 0
+   failures.
+10. **UI smoke-test**: user manually verified the two-user
+    demo on the iPhone 17 Pro simulator. Tap + bootstraps,
+    Alice ↔ Bob round-trips work, persona toggle swaps the
+    POV correctly. (Brief detour into trying to drive the
+    simulator via CGEvent clicks — partial success but slower
+    than manual testing; the user confirmed verbally.)
+11. **Push + CI**: pushed `main` + `v0.0.9-sprint-8`. Both
+    CI runs green (~40s and ~60s). Issue #12 closed with a
+    DoD-ticked comment.
+12. **Sprint 9 planning round**: surfaced backend choice
+    (A/B/C) + sub-decisions. User confirmed no Apple Developer
+    Program enrolment yet, which constrains the path:
+    - A blocked (CloudKit needs paid Apple account)
+    - C premature
+    - **B chosen**, with **polling instead of push** because
+      APNs also needs the paid account
+    - Wire format JSON, server scope minimal HTTP API,
+      separate `aegis-relay` repo settled
+    - Server runtime (Vapor / Go / Swift NIO) is the one open
+      sub-decision when this session ended
 
 ---
 
@@ -731,41 +936,47 @@ without it. The user hasn't pushed back.
 When the new agent picks up:
 
 - [ ] Run the verification checklist at the top of this file.
-- [ ] Confirm `swift test` exits with 224 / 3 skipped / 0
+- [ ] Confirm `swift test` exits with 292 / 3 skipped / 0
       failures.
 - [ ] Confirm CI is green on `origin/main`.
 - [ ] Confirm the Aegis app is still installed on the iPhone
-      17 Pro simulator (or accept that the user may have erased
-      it; reinstalling is `xcodebuild build` + `xcrun simctl
-      install`).
-- [ ] Read `docs/STAGES.md` v0.0.8 entry (the "Conscious
-      deviation — split iOS distribution from Sprint 6" note,
-      and the v0.0.9 / Sprint 8 entry which is the next-up).
-- [ ] Read the open Sprint 8 issue body at #12 for the
+      17 Pro simulator and the Conversations tab works
+      (tap + → bootstrap → toggle persona → send a message
+      → flip persona → see it as incoming).
+- [ ] Read `docs/STAGES.md` v0.0.10 entry (Sprint 9).
+- [ ] Read the open Sprint 9 issue body at #13 for the
       definition-of-done checklist that needs ticking at tag
       time.
-- [ ] When the user answers the three Sprint 8 decisions,
-      start commit 1 (storage layer schema + chosen storage
-      tooling).
+- [ ] When the user answers the **server runtime question**
+      (Vapor / Go / Swift NIO), start commit 1 (wire format
+      types — pure client-side Swift, no networking).
 - [ ] Use the established settled-choices-table /
-      planning-round pattern at the start of EVERY sprint.
+      planning-round pattern for any further sub-decisions.
 - [ ] Tag commits crypto-core where they touch
-      `Sources/AegisCrypto/Tier1/**` paths (see GOVERNANCE.md
-      §"What is the cryptographic core?"). Storage layer code
-      under `Sources/AegisStorage/**` is NOT crypto-core per
-      that literal definition — but if Sprint 8 extends
-      `AegisStorage` to persist `RatchetSession` (which the
-      previous session recommended), the
-      persistence-of-secret-material discipline still applies
-      (matches the AegisStorage Sprint-6 commit's
-      `crypto-core(storage):` type).
+      `Sources/AegisCrypto/Tier1/**` paths. For new wire-format
+      types in `Sources/AegisCrypto/Wire/**` (likely path),
+      use `crypto-core(wire):` per the Sprint 8 precedent for
+      crypto-adjacent types — these are on-the-wire artefacts
+      whose drift would break interop, so the discipline
+      applies.
+- [ ] Remember the **May 2026 canary** is due on or after
+      **2026-05-01** (3 days from this handoff). User has
+      agreed to draft + sign on May 1 — offer to do it then.
+      Recipe is in `canary/` directory comment above and in
+      `canary/2026-04.txt` as a template.
+- [ ] When tagging `v0.0.10-sprint-9`, write the **fourth
+      Conscious deviation** in STAGES.md: "Sprint 9 push-
+      notification consumer deferred to Sprint 9b pending
+      Apple Developer Program enrolment."
 
 ---
 
 *New agent: read this file, run the verification checklist,
 then read STAGES.md and the four governance docs (MISSION.md,
 THREAT-MODEL.md, GOVERNANCE.md, ALGORITHM-SUBMISSION.md). When
-the user answers the three Sprint 8 decisions, start the
-planning round and then commit 1. The user's tone preferences
-matter — terse, table-formatted, no hype, surface decisions
-before code, end big chunks with status snapshots.*
+the user answers the server runtime question, start the
+remaining planning-round confirmation and then commit 1
+(wire format types). The user's tone preferences matter —
+terse, table-formatted, no hype, surface decisions before
+code, end big chunks with status snapshots, surface mid-sprint
+forks rather than guessing.*
